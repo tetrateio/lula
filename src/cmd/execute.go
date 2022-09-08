@@ -63,7 +63,7 @@ var mutateLogPath, variablesString, valuesFile, namespace, userInfoPath string
 
 var executeCmd = &cobra.Command{
 	Use:   "execute",
-	Short: "execute",
+	Short: "exec",
 	Long:  `execute`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Conduct further error checking here (IE flags/arguments)
@@ -76,21 +76,64 @@ var executeCmd = &cobra.Command{
 }
 
 func conductExecute(args []string) error {
+	// determine if entries in args[0] are files or directories
+	path := args[0]
 	// ingest target document(s) and create an object map of control/validations (TODO: Function)
+	controls, err := ingestControls([]string{path})
+	for _, control := range controls {
+		path, err := generatePolicy(control)
+		if err != nil {
+			log.Log.Error(err, "error string")
+		}
 
+		// For right now, we are just passing in a single path/policy as we can use the applyCommandHelper function to provide results for parsing
+		// We don't want to pass multiple controls at once currently - as the command will aggregate findings and be unable to decipher between
+		// when a control passes or fails individually?
+		rc, _, _, _, err := applyCommandHelper([]string{}, "", true, true, "", "", "", "", []string{path}, false, false)
+		if err != nil {
+			return err
+		}
+		// TODO: do some meaningful processing here
+		if rc.Pass > 0 && rc.Fail == 0 {
+			control.Status = "Pass"
+		} else {
+			control.Status = "Fail"
+		}
+
+	}
+	if err != nil {
+		log.Log.Error(err, "error string")
+	}
 	// For each control to be validated:
 	// 		Template query rules into ClusterPolicy resource (Create one file per control and place in $PWD)(TODO: Function)
 	// 		Pass generated policy path to applyCommandHelper
 	//		Process Pass/Fail and append to object map (under control) (TODO: Step)
 	// Generate OSCAL document w/ object map and results (TODO: Function)
 
-	rc, resources, skipInvalidPolicies, pvInfos, err := applyCommandHelper([]string{}, "", true, true, "", "", "", "", []string{"test/cli/policies"}, false, false)
-	if err != nil {
-		return err
-	}
+	GenerateReport()
 
-	printReportOrViolation(policyReport, rc, resourcePaths, len(resources), skipInvalidPolicies, stdin, pvInfos)
+	//printReportOrViolation(policyReport, rc, resourcePaths, len(resources), skipInvalidPolicies, stdin, pvInfos)
 	return nil
+}
+
+// Parse the ingested documents (POC = 1) for applicable information
+// return a slice of Control objects
+func ingestControls(filepaths []string) (controls []Control, err error) {
+
+}
+
+// Turn a ruleset into a ClusterPolicy resource for ability to use Kyverno applyCommandHelper without modification
+// This needs to copy the rules into a Cluster Policy resource (yaml) and write to individual files
+// Kyverno will perform applying these and generating pass/fail results
+func generatePolicy(control Control) (policyPath string, err error) {
+
+}
+
+// This is the OSCAL document generation for final output.
+// This should include some ability to consolidate controls met in multiple input documents under single control entries
+// This should include fields that reference the source of the control to the original document ingested
+func GenerateReport() (err error) {
+
 }
 
 // github.com/kyverno/kyverno v1.7.1 (Copy/Paste - No modification)
