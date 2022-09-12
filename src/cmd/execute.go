@@ -7,6 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/bigbang-oscal-component-generator/internal/types"
+	"gopkg.in/yaml.v2"
+
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/kyverno/kyverno/api/kyverno/v1beta1"
 	"github.com/kyverno/kyverno/cmd/cli/kubectl-kyverno/utils/common"
@@ -42,21 +45,6 @@ type SkippedInvalidPolicies struct {
 	invalid []string
 }
 
-// New structs
-// UUID and ControlId pulled directly from "ImplementedRequirements"
-// ParentUUID to allow traceability and aggregation of a control satisfied in multiple ways
-// Status is for storage of the Pass/Fail state
-type Control struct {
-	UUID       string
-	ControlId  string
-	ParentUUID string
-	Status     string
-}
-
-type ComplianceReport struct {
-	Controls []Control
-}
-
 var resourcePaths []string
 var cluster, policyReport, stdin, registryAccess bool
 var mutateLogPath, variablesString, valuesFile, namespace, userInfoPath string
@@ -65,21 +53,25 @@ var executeCmd = &cobra.Command{
 	Use:   "execute",
 	Short: "exec",
 	Long:  `execute`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, controlPaths []string) {
 		// Conduct further error checking here (IE flags/arguments)
 		// Conduct other pre-flight checks (Does the file exist?)
-		err := conductExecute(args)
+		err := conductExecute(controlPaths)
 		if err != nil {
 			log.Log.Error(err, "error string")
 		}
 	},
 }
 
-func conductExecute(args []string) error {
-	// determine if entries in args[0] are files or directories
-	path := args[0]
-	// ingest target document(s) and create an object map of control/validations (TODO: Function)
-	controls, err := ingestControls([]string{path})
+func conductExecute(controlPaths []string) error {
+	// unmarshall all documents to types.OscalComponentDocument into a slice of component documents
+	// Declare empty slice of oscalComponentDocuments
+	oscalComponentFromPaths(controlPaths)
+
+	// with an array/slice of oscalComponentDocuments, search each implemented requirement for a props.name/value (harcoded and specific value for now)
+	// copy struct to slice of implementedRequirements
+	// foreach oscalCompoentDocument -- foreach implemented requirement -- if props.name == compliance validator
+	controls, err := getControls()
 	for _, control := range controls {
 		path, err := generatePolicy(control)
 		if err != nil {
@@ -110,29 +102,35 @@ func conductExecute(args []string) error {
 	//		Process Pass/Fail and append to object map (under control) (TODO: Step)
 	// Generate OSCAL document w/ object map and results (TODO: Function)
 
-	GenerateReport()
+	generateReport()
 
 	//printReportOrViolation(policyReport, rc, resourcePaths, len(resources), skipInvalidPolicies, stdin, pvInfos)
 	return nil
 }
 
+// Open files and attempt to unmarshall to oscal component definition structs
+func oscalComponentFromPaths(filepaths []string) {
+
+}
+
 // Parse the ingested documents (POC = 1) for applicable information
+// Knowns = this will be a yaml file
 // return a slice of Control objects
-func ingestControls(filepaths []string) (controls []Control, err error) {
+func getControls() (err error) {
 
 }
 
 // Turn a ruleset into a ClusterPolicy resource for ability to use Kyverno applyCommandHelper without modification
 // This needs to copy the rules into a Cluster Policy resource (yaml) and write to individual files
 // Kyverno will perform applying these and generating pass/fail results
-func generatePolicy(control Control) (policyPath string, err error) {
+func generatePolicy() (policyPath string, err error) {
 
 }
 
 // This is the OSCAL document generation for final output.
 // This should include some ability to consolidate controls met in multiple input documents under single control entries
 // This should include fields that reference the source of the control to the original document ingested
-func GenerateReport() (err error) {
+func generateReport() (err error) {
 
 }
 
