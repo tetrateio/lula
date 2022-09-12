@@ -5,13 +5,7 @@ import (
 	"time"
 )
 
-type OscalTest struct {
-	ComponentDefinition struct {
-		UUID     string `yaml:"uuid"`
-	} `yaml:"component-definition"`
-}
-
-type OscalDocument struct {
+type OscalComponentDefinition struct {
 	ComponentDefinition struct {
 		UUID     string `yaml:"uuid"`
 		Metadata struct {
@@ -29,7 +23,7 @@ type OscalDocument struct {
 				} `yaml:"links"`
 			} `yaml:"parties"`
 		} `yaml:"metadata"`
-		Components struct {
+		Components []struct {
 			UUID             string `yaml:"uuid"`
 			Type             string `yaml:"type"`
 			Title            string `yaml:"title"`
@@ -40,9 +34,9 @@ type OscalDocument struct {
 				PartyUUID string `yaml:"party-uuid"`
 			} `yaml:"responsible-roles"`
 			ControlImplementations []struct {
-				UUID                    string `yaml:"uuid"`
-				Source                  string `yaml:"source"`
-				Description             string `yaml:"description"`
+				UUID                    string                          `yaml:"uuid"`
+				Source                  string                          `yaml:"source"`
+				Description             string                          `yaml:"description"`
 				ImplementedRequirements []ImplementedRequirementsCustom `yaml:"implemented-requirements"`
 			} `yaml:"control-implementations"`
 		}

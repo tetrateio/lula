@@ -8,7 +8,7 @@ import (
 	"time"
 
 	// "github.com/defenseunicorns/bigbang-oscal-component-generator/internal/types"
-	// "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 
 	types "github.com/defenseunicorns/compliance-auditor/src/internal/types"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -54,10 +54,10 @@ var executeCmd = &cobra.Command{
 	Use:   "execute",
 	Short: "exec",
 	Long:  `execute`,
-	Run: func(cmd *cobra.Command, controlPaths []string) {
+	Run: func(cmd *cobra.Command, componentDefinitionPaths []string) {
 		// Conduct further error checking here (IE flags/arguments)
 		// Conduct other pre-flight checks (Does the file exist?)
-		err := conductExecute(controlPaths)
+		err := conductExecute(componentDefinitionPaths)
 		if err != nil {
 			log.Log.Error(err, "error string")
 		}
@@ -65,27 +65,26 @@ var executeCmd = &cobra.Command{
 }
 
 func check(e error) {
-    if e != nil {
-        panic(e)
-    }
+	if e != nil {
+		panic(e)
+	}
 }
 
-func conductExecute(controlPaths []string) error {
+func conductExecute(componentDefinitionPaths []string) error {
 	// unmarshall all documents to types.OscalComponentDocument into a slice of component documents
 	// Declare empty slice of oscalComponentDocuments
-	oscalDocuments, err := oscalDocumentsFromPaths(controlPaths)
+	oscalComponentDefinitions, err := oscalComponentDefinitionsFromPaths(componentDefinitionPaths)
 	check(err)
-
-	fmt.Println(oscalDocuments[0].ComponentDefinition.UUID)
-
-	/*
 
 	// with an array/slice of oscalComponentDocuments, search each implemented requirement for a props.name/value (harcoded and specific value for now)
 	// copy struct to slice of implementedRequirements
 	// foreach oscalCompoentDocument -- foreach implemented requirement -- if props.name == compliance validator
-	controls, err := getControls()
-	for _, control := range controls {
-		path, err := generatePolicy(control)
+	implementedReqs, err := getImplementedReqs(oscalComponentDefinitions)
+	for _, implementedReq := range implementedReqs {
+		println()
+		println(implementedReq.Description)
+
+		path, err := generatePolicy(implementedReq)
 		if err != nil {
 			log.Log.Error(err, "error string")
 		}
@@ -98,12 +97,11 @@ func conductExecute(controlPaths []string) error {
 			return err
 		}
 		// TODO: do some meaningful processing here
-		if rc.Pass > 0 && rc.Fail == 0 {
-			control.Status = "Pass"
-		} else {
-			control.Status = "Fail"
-		}
-
+		// if rc.Pass > 0 && rc.Fail == 0 {
+		// 	implementedReq.Status = "Pass"
+		// } else {
+		// 	implementedReq.Status = "Fail"
+		// }
 	}
 	if err != nil {
 		log.Log.Error(err, "error string")
@@ -114,32 +112,25 @@ func conductExecute(controlPaths []string) error {
 	//		Process Pass/Fail and append to object map (under control) (TODO: Step)
 	// Generate OSCAL document w/ object map and results (TODO: Function)
 
-	generateReport()
+	// generateReport()
 
 	//printReportOrViolation(policyReport, rc, resourcePaths, len(resources), skipInvalidPolicies, stdin, pvInfos)
-	*/
+	
 	return nil
 }
 
 // Open files and attempt to unmarshall to oscal component definition structs
-func oscalDocumentsFromPaths(filepaths []string) (oscalDocuments []types.OscalTest, err error) {
+func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefinitions []types.OscalComponentDefinition, err error) {
 	for _, path := range filepaths {
 		rawDoc, err := os.ReadFile(path)
 		check(err)
 
-		var oscalDocument types.OscalTest
+		var oscalComponentDefinition types.OscalComponentDefinition
 
-		fmt.Printf("%v", oscalDocument)
-		fmt.Println(oscalDocument.ComponentDefinition.UUID)
-		fmt.Println("After:")
-
-		err = yaml1.UnmarshalStrict(rawDoc, &oscalDocument)
+		err = yaml.Unmarshal(rawDoc, &oscalComponentDefinition)
 		check(err)
 
-		fmt.Printf("%v", oscalDocument)
-		fmt.Println(oscalDocument.ComponentDefinition.UUID)
-
-		oscalDocuments = append(oscalDocuments, oscalDocument)
+		oscalComponentDefinitions = append(oscalComponentDefinitions, oscalComponentDefinition)
 	}
 
 	return
@@ -148,9 +139,16 @@ func oscalDocumentsFromPaths(filepaths []string) (oscalDocuments []types.OscalTe
 // Parse the ingested documents (POC = 1) for applicable information
 // Knowns = this will be a yaml file
 // return a slice of Control objects
-// func getControls() (err error) {
-
-// }
+func getImplementedReqs(componentDefinitions []types.OscalComponentDefinition) (implementedReqs []types.ImplementedRequirementsCustom, err error) {
+    for _, componentDefinition := range componentDefinitions {
+		for _, component := range componentDefinition.ComponentDefinition.Components {
+			for _, controlImplementation := range component.ControlImplementations {
+				implementedReqs = append(implementedReqs, controlImplementation.ImplementedRequirements...)
+			}
+		}
+	}
+	return
+}
 
 // Turn a ruleset into a ClusterPolicy resource for ability to use Kyverno applyCommandHelper without modification
 // This needs to copy the rules into a Cluster Policy resource (yaml) and write to individual files
