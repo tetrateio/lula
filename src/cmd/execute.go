@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/bigbang-oscal-component-generator/internal/types"
-	"gopkg.in/yaml.v2"
+	// "github.com/defenseunicorns/bigbang-oscal-component-generator/internal/types"
+	// "gopkg.in/yaml.v2"
 
+	types "github.com/defenseunicorns/compliance-auditor/src/internal/types"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/kyverno/kyverno/api/kyverno/v1beta1"
 	"github.com/kyverno/kyverno/cmd/cli/kubectl-kyverno/utils/common"
@@ -63,10 +64,21 @@ var executeCmd = &cobra.Command{
 	},
 }
 
+func check(e error) {
+    if e != nil {
+        panic(e)
+    }
+}
+
 func conductExecute(controlPaths []string) error {
 	// unmarshall all documents to types.OscalComponentDocument into a slice of component documents
 	// Declare empty slice of oscalComponentDocuments
-	oscalComponentFromPaths(controlPaths)
+	oscalDocuments, err := oscalDocumentsFromPaths(controlPaths)
+	check(err)
+
+	fmt.Println(oscalDocuments[0].ComponentDefinition.UUID)
+
+	/*
 
 	// with an array/slice of oscalComponentDocuments, search each implemented requirement for a props.name/value (harcoded and specific value for now)
 	// copy struct to slice of implementedRequirements
@@ -105,34 +117,54 @@ func conductExecute(controlPaths []string) error {
 	generateReport()
 
 	//printReportOrViolation(policyReport, rc, resourcePaths, len(resources), skipInvalidPolicies, stdin, pvInfos)
+	*/
 	return nil
 }
 
 // Open files and attempt to unmarshall to oscal component definition structs
-func oscalComponentFromPaths(filepaths []string) {
+func oscalDocumentsFromPaths(filepaths []string) (oscalDocuments []types.OscalTest, err error) {
+	for _, path := range filepaths {
+		rawDoc, err := os.ReadFile(path)
+		check(err)
 
+		var oscalDocument types.OscalTest
+
+		fmt.Printf("%v", oscalDocument)
+		fmt.Println(oscalDocument.ComponentDefinition.UUID)
+		fmt.Println("After:")
+
+		err = yaml1.UnmarshalStrict(rawDoc, &oscalDocument)
+		check(err)
+
+		fmt.Printf("%v", oscalDocument)
+		fmt.Println(oscalDocument.ComponentDefinition.UUID)
+
+		oscalDocuments = append(oscalDocuments, oscalDocument)
+	}
+
+	return
 }
 
 // Parse the ingested documents (POC = 1) for applicable information
 // Knowns = this will be a yaml file
 // return a slice of Control objects
-func getControls() (err error) {
+// func getControls() (err error) {
 
-}
+// }
 
 // Turn a ruleset into a ClusterPolicy resource for ability to use Kyverno applyCommandHelper without modification
 // This needs to copy the rules into a Cluster Policy resource (yaml) and write to individual files
 // Kyverno will perform applying these and generating pass/fail results
-func generatePolicy() (policyPath string, err error) {
+// func generatePolicy() (policyPath string, err error) {
 
-}
+// }
 
 // This is the OSCAL document generation for final output.
 // This should include some ability to consolidate controls met in multiple input documents under single control entries
 // This should include fields that reference the source of the control to the original document ingested
-func generateReport() (err error) {
+// func generateReport() (err error) {
 
-}
+// }
 
 // github.com/kyverno/kyverno v1.7.1 (Copy/Paste - No modification)
 func applyCommandHelper(resourcePaths []string, userInfoPath string, cluster bool, policyReport bool, mutateLogPath string,
