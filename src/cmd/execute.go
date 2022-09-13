@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	// "github.com/defenseunicorns/bigbang-oscal-component-generator/internal/types"
 	types "github.com/defenseunicorns/compliance-auditor/src/internal/types"
+	yaml2 "github.com/ghodss/yaml"
 	"github.com/go-git/go-billy/v5/memfs"
 	v1 "github.com/kyverno/kyverno/api/kyverno/v1"
 	"github.com/kyverno/kyverno/api/kyverno/v1beta1"
@@ -21,7 +22,6 @@ import (
 	policy2 "github.com/kyverno/kyverno/pkg/policy"
 	"github.com/kyverno/kyverno/pkg/policyreport"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -93,20 +93,24 @@ func conductExecute(componentDefinitionPaths []string) error {
 			continue
 		}
 
-		fmt.Printf("Path is %v", path)
+		//fmt.Printf("Path is %v", path)
 		// For right now, we are just passing in a single path/policy as we can use the applyCommandHelper function to provide results for parsing
 		// We don't want to pass multiple controls at once currently - as the command will aggregate findings and be unable to decipher between
 		// when a control passes or fails individually?
-		// rc, _, _, _, err := applyCommandHelper([]string{}, "", true, true, "", "", "", "", []string{path}, false, false)
-		// if err != nil {
-		// 	return err
-		// }
+		rc, _, _, _, err := applyCommandHelper([]string{}, "", true, true, "", "", "", "", []string{path}, false, false)
+		if err != nil {
+			return err
+		}
 		// TODO: do some meaningful processing here
-		// if rc.Pass > 0 && rc.Fail == 0 {
-		// 	implementedReq.Status = "Pass"
-		// } else {
-		// 	implementedReq.Status = "Fail"
-		// }
+		var status string
+		if rc.Pass > 0 && rc.Fail == 0 {
+			status = "Pass"
+		} else {
+			status = "Fail"
+		}
+		fmt.Printf("Pass: %v / Fail: %v\n", rc.Pass, rc.Fail)
+
+		fmt.Printf("Policy: %v.yaml / Status: %v\n", implementedReq.UUID, status)
 	}
 	if err != nil {
 		log.Log.Error(err, "error string")
@@ -130,9 +134,14 @@ func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefin
 		rawDoc, err := os.ReadFile(path)
 		check(err)
 
+		jsonDoc, err := yaml2.YAMLToJSON(rawDoc)
+		if err != nil {
+			fmt.Printf("Error converting YAML to JSON: %s\n", err.Error())
+		}
+
 		var oscalComponentDefinition types.OscalComponentDefinition
 
-		err = yaml.Unmarshal(rawDoc, &oscalComponentDefinition)
+		err = json.Unmarshal(jsonDoc, &oscalComponentDefinition)
 		check(err)
 
 		oscalComponentDefinitions = append(oscalComponentDefinitions, oscalComponentDefinition)
@@ -161,25 +170,26 @@ func getImplementedReqs(componentDefinitions []types.OscalComponentDefinition) (
 func generatePolicy(implementedRequirement types.ImplementedRequirementsCustom) (policyPath string, err error) {
 
 	if len(implementedRequirement.Rules) != 0 {
-
+		// fmt.Printf("%v", implementedRequirement.Rules[0].Validation.RawPattern)
 		policy := v1.ClusterPolicy{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ClusterPolicy",
 				APIVersion: "kyverno.io/v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: implementedRequirement.ControlID,
+				Name: implementedRequirement.UUID,
 			},
 			Spec: v1.Spec{
 				Rules: implementedRequirement.Rules,
 			}}
-		yamlData, err := yaml.Marshal(&policy)
+		// Requires the use of sigs.k8s.io/yaml for proper marshalling
+		yamlData, err := yaml1.Marshal(&policy)
 
 		if err != nil {
 			fmt.Printf("Error while Marshaling. %v", err)
 		}
 
-		fileName := implementedRequirement.ControlID + ".yaml"
+		fileName := implementedRequirement.UUID + ".yaml"
 		err = ioutil.WriteFile(fileName, yamlData, 0644)
 		if err != nil {
 			panic("Unable to write data into the file")
