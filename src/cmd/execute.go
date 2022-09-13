@@ -54,16 +54,21 @@ var mutateLogPath, variablesString, valuesFile, namespace, userInfoPath string
 
 var executeCmd = &cobra.Command{
 	Use:   "execute",
-	Short: "exec",
+	Short: "execute",
 	Long:  `execute`,
 	Run: func(cmd *cobra.Command, componentDefinitionPaths []string) {
 		// Conduct further error checking here (IE flags/arguments)
 		// Conduct other pre-flight checks (Does the file exist?)
-		err := conductExecute(componentDefinitionPaths)
+		err := conductExecute(componentDefinitionPaths, resourcePaths)
 		if err != nil {
 			log.Log.Error(err, "error string")
 		}
 	},
+}
+
+func init() {
+	executeCmd.Flags().StringArrayVarP(&resourcePaths, "resource", "r", []string{}, "Path to resource files")
+	// executeCmd.Flags().BoolVarP(&cluster, "cluster", "c", true, "Checks if policies should be applied to cluster in the current context")
 }
 
 func check(e error) {
@@ -72,7 +77,11 @@ func check(e error) {
 	}
 }
 
-func conductExecute(componentDefinitionPaths []string) error {
+func conductExecute(componentDefinitionPaths []string, resourcePaths []string) error {
+	cluster := true
+	if len(resourcePaths) > 0 {
+		cluster = false
+	}
 	// unmarshall all documents to types.OscalComponentDocument into a slice of component documents
 	// Declare empty slice of oscalComponentDocuments
 	oscalComponentDefinitions, err := oscalComponentDefinitionsFromPaths(componentDefinitionPaths)
@@ -99,13 +108,13 @@ func conductExecute(componentDefinitionPaths []string) error {
 		// For right now, we are just passing in a single path/policy as we can use the applyCommandHelper function to provide results for parsing
 		// We don't want to pass multiple controls at once currently - as the command will aggregate findings and be unable to decipher between
 		// when a control passes or fails individually?
-		rc, _, _, _, err := applyCommandHelper([]string{}, "", true, true, "", "", "", "", []string{path}, false, false)
+		rc, _, _, _, err := applyCommandHelper(resourcePaths, "", cluster, true, "", "", "", "", []string{path}, false, false)
 		if err != nil {
 			return err
 		}
 
 		var currentReport types.ComplianceReport
-		
+
 		// TODO: do some meaningful processing here
 		var result string
 		if rc.Pass > 0 && rc.Fail == 0 {
@@ -118,7 +127,6 @@ func conductExecute(componentDefinitionPaths []string) error {
 		currentReport.Result = result
 
 		complianceReports = append(complianceReports, currentReport)
-
 
 		fmt.Printf("Pass: %v / Fail: %v\n", rc.Pass, rc.Fail)
 
