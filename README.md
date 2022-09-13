@@ -33,14 +33,14 @@ The following will allow you to setup a simple demo of the tool to querie agains
 
 #### Steps
 1. Clone the reposity to your local machine
-2. While in the ```compliance-auditor``` directory, run ```go build .``` to compile the tool
-3. Apply the ```namespace.yaml``` file in the ```demo/``` directory to your cluster
-4. Apply the ```pod.fail.yaml``` file to your cluster
-5. Run the following command in the ```compliance-auditor``` directory, ```./compliance-auditor execute ./demo/oscal-component.yaml```
+2. While in the `compliance-auditor` directory, run ```go build .``` to compile the tool
+3. Apply the `namespace.yaml` file in the `demo` directory to your cluster using the ```kubectl apply -f ./demo/namespace.yaml``` command
+4. Apply the `pod.fail.yaml` file to your cluster using the ```kubectl apply -f ./demo/pod.fail.yaml``` command
+5. Run the following command in the `compliance-auditor` directory, ```./compliance-auditor execute ./demo/oscal-component.yaml```
     - The tool should inform you that there is at least one failing pod in the cluster
-6. Now, apply the ```pod.pass.yaml``` file to your cluster
+6. Now, apply the `pod.pass.yaml` file to your cluster using the ```kubectl apply -f ./demo/pod.pass.yaml``` command
     - This should overwrite the failing pod in your cluster
-7. Run the following command in the ```compliance-auditor``` directory, ```./compliance-auditor execute ./demo/oscal-component.yaml```
+7. Run the following command in the `compliance-auditor` directory, ```./compliance-auditor execute ./demo/oscal-component.yaml```
     - The tool should now show the pod as passing the compliance requirement
 
 
