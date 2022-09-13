@@ -302,6 +302,17 @@ component-definition:
               spec:
                 ^(containers):
                 - image: "*/istio/proxyv*"
+        - name: istio-controlplane_AC-4(peer-authentication-STRICT)
+          match:
+            resources:
+                kinds: 
+                - PeerAuthentication
+          validate:
+            message: "Every peer authentication should have mtls set to STRICT"
+            pattern:
+              spec:
+                mtls:
+                  mode: "STRICT"
 
       - uuid: 1D1E8705-F6EB-4A21-A24F-1DF7427BA491
         control-id: ac-4.4
