@@ -3,11 +3,11 @@ module github.com/defenseunicorns/compliance-auditor
 go 1.19
 
 require (
+	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/kyverno/kyverno v1.7.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.5.0
-	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
 	k8s.io/cli-runtime v0.23.2
@@ -96,7 +96,6 @@ require (
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/fullstorydev/grpcurl v1.8.2 // indirect
 	github.com/gardener/controller-manager-library v0.2.0 // indirect
-	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 // indirect
 	github.com/go-chi/chi v4.1.2+incompatible // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-logr/logr v1.2.2 // indirect
@@ -289,6 +288,7 @@ require (
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0 // indirect
 	k8s.io/apiextensions-apiserver v0.23.4 // indirect
 	k8s.io/client-go v0.23.5 // indirect
