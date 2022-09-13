@@ -31,7 +31,7 @@ type OscalComponentDefinition struct {
 			Purpose          string `json:"purpose" yaml:"purpose"`
 			ResponsibleRoles []struct {
 				RoleID    string `json:"role-id" yaml:"role-id"`
-				PartyUUID string `json:"party-uuid" yaml:"party-uuid"`
+				PartyUUIDs []string `json:"party-uuids" yaml:"party-uuids"`
 			} `json:"responsible-roles" yaml:"responsible-roles"`
 			ControlImplementations []struct {
 				UUID                    string                          `json:"uuid" yaml:"uuid"`
@@ -57,4 +57,9 @@ type ImplementedRequirementsCustom struct {
 	ControlID   string         `json:"control-id" yaml:"control-id"`
 	Description string         `json:"description" yaml:"description"`
 	Rules       []Kyverno.Rule `json:"rules,omitempty" yaml:"rules,omitempty"`
+}
+
+type ComplianceReport struct {
+	SourceRequirements ImplementedRequirementsCustom `json:"source-requirements" yaml:"source-requirements"`
+	Result string `json:"result" yaml:"result"`
 }

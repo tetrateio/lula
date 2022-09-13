@@ -78,6 +78,8 @@ func conductExecute(componentDefinitionPaths []string) error {
 	oscalComponentDefinitions, err := oscalComponentDefinitionsFromPaths(componentDefinitionPaths)
 	check(err)
 
+	var complianceReports []types.ComplianceReport
+
 	// with an array/slice of oscalComponentDocuments, search each implemented requirement for a props.name/value (harcoded and specific value for now)
 	// copy struct to slice of implementedRequirements
 	// foreach oscalCompoentDocument -- foreach implemented requirement -- if props.name == compliance validator
@@ -101,16 +103,26 @@ func conductExecute(componentDefinitionPaths []string) error {
 		if err != nil {
 			return err
 		}
+
+		var currentReport types.ComplianceReport
+		
 		// TODO: do some meaningful processing here
-		var status string
+		var result string
 		if rc.Pass > 0 && rc.Fail == 0 {
-			status = "Pass"
+			result = "Pass"
 		} else {
-			status = "Fail"
+			result = "Fail"
 		}
+
+		currentReport.SourceRequirements = implementedReq
+		currentReport.Result = result
+
+		complianceReports = append(complianceReports, currentReport)
+
+
 		fmt.Printf("Pass: %v / Fail: %v\n", rc.Pass, rc.Fail)
 
-		fmt.Printf("Policy: %v.yaml / Status: %v\n", implementedReq.UUID, status)
+		fmt.Printf("Policy: %v.yaml / Status: %v\n", implementedReq.UUID, result)
 	}
 	if err != nil {
 		log.Log.Error(err, "error string")
@@ -121,7 +133,7 @@ func conductExecute(componentDefinitionPaths []string) error {
 	//		Process Pass/Fail and append to object map (under control) (TODO: Step)
 	// Generate OSCAL document w/ object map and results (TODO: Function)
 
-	// generateReport()
+	generateReport(complianceReports)
 
 	//printReportOrViolation(policyReport, rc, resourcePaths, len(resources), skipInvalidPolicies, stdin, pvInfos)
 
@@ -134,12 +146,12 @@ func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefin
 		rawDoc, err := os.ReadFile(path)
 		check(err)
 
+		var oscalComponentDefinition types.OscalComponentDefinition
+
 		jsonDoc, err := yaml2.YAMLToJSON(rawDoc)
 		if err != nil {
 			fmt.Printf("Error converting YAML to JSON: %s\n", err.Error())
 		}
-
-		var oscalComponentDefinition types.OscalComponentDefinition
 
 		err = json.Unmarshal(jsonDoc, &oscalComponentDefinition)
 		check(err)
@@ -203,9 +215,17 @@ func generatePolicy(implementedRequirement types.ImplementedRequirementsCustom) 
 // This is the OSCAL document generation for final output.
 // This should include some ability to consolidate controls met in multiple input documents under single control entries
 // This should include fields that reference the source of the control to the original document ingested
-// func generateReport() (err error) {
+func generateReport(compiledReport []types.ComplianceReport) (err error) {
+	reportData, err := yaml1.Marshal(&compiledReport)
+	check(err)
 
-// }
+	currentTime := time.Now()
+	fileName := "compliance_report-" + currentTime.Format("01-02-2006-15:04:05") + ".yaml"
+
+	err = ioutil.WriteFile(fileName, reportData, 0644)
+	check(err)
+	return
+}
 
 // github.com/kyverno/kyverno v1.7.1 (Copy/Paste - No modification)
 func applyCommandHelper(resourcePaths []string, userInfoPath string, cluster bool, policyReport bool, mutateLogPath string,
