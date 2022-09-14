@@ -1,4 +1,4 @@
-package cmd
+package execute
 
 import (
 	"encoding/json"
@@ -49,21 +49,27 @@ type SkippedInvalidPolicies struct {
 }
 
 var resourcePaths []string
-var cluster, policyReport, stdin, registryAccess bool
-var mutateLogPath, variablesString, valuesFile, namespace, userInfoPath string
+var cluster, dryRun bool
 
 var executeCmd = &cobra.Command{
 	Use:   "execute",
-	Short: "exec",
+	Short: "execute",
 	Long:  `execute`,
 	Run: func(cmd *cobra.Command, componentDefinitionPaths []string) {
 		// Conduct further error checking here (IE flags/arguments)
 		// Conduct other pre-flight checks (Does the file exist?)
-		err := conductExecute(componentDefinitionPaths)
+		err := conductExecute(componentDefinitionPaths, resourcePaths, dryRun)
 		if err != nil {
 			log.Log.Error(err, "error string")
 		}
 	},
+}
+
+func Command() *cobra.Command {
+	executeCmd.Flags().StringArrayVarP(&resourcePaths, "resource", "r", []string{}, "Path to resource files")
+	executeCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Specifies whether to write reports to filesystem")
+
+	return executeCmd
 }
 
 func check(e error) {
@@ -72,7 +78,11 @@ func check(e error) {
 	}
 }
 
-func conductExecute(componentDefinitionPaths []string) error {
+func conductExecute(componentDefinitionPaths []string, resourcePaths []string, dryRun bool) error {
+	cluster := true
+	if len(resourcePaths) > 0 {
+		cluster = false
+	}
 	// unmarshall all documents to types.OscalComponentDocument into a slice of component documents
 	// Declare empty slice of oscalComponentDocuments
 	oscalComponentDefinitions, err := oscalComponentDefinitionsFromPaths(componentDefinitionPaths)
@@ -95,18 +105,17 @@ func conductExecute(componentDefinitionPaths []string) error {
 			continue
 		}
 
-		//fmt.Printf("Path is %v", path)
 		// For right now, we are just passing in a single path/policy as we can use the applyCommandHelper function to provide results for parsing
 		// We don't want to pass multiple controls at once currently - as the command will aggregate findings and be unable to decipher between
 		// when a control passes or fails individually?
-		rc, _, _, _, err := applyCommandHelper([]string{}, "", true, true, "", "", "", "", []string{path}, false, false)
+		rc, _, _, _, err := applyCommandHelper(resourcePaths, "", cluster, true, "", "", "", "", []string{path}, false, false)
 		if err != nil {
 			return err
 		}
-
+		// Cleanup the policies - TODO: Introduce a flag that retains policies under a new directory
+		os.Remove(path)
 		var currentReport types.ComplianceReport
-		
-		// TODO: do some meaningful processing here
+
 		var result string
 		if rc.Pass > 0 && rc.Fail == 0 {
 			result = "Pass"
@@ -119,23 +128,16 @@ func conductExecute(componentDefinitionPaths []string) error {
 
 		complianceReports = append(complianceReports, currentReport)
 
-
-		fmt.Printf("Pass: %v / Fail: %v\n", rc.Pass, rc.Fail)
-
-		fmt.Printf("Policy: %v.yaml / Status: %v\n", implementedReq.UUID, result)
+		fmt.Printf("UUID: %v / Status: %v\n", implementedReq.UUID, result)
+		fmt.Printf("Resources Passing: %v / Resources Failing: %v\n", rc.Pass, rc.Fail)
 	}
 	if err != nil {
 		log.Log.Error(err, "error string")
 	}
-	// For each control to be validated:
-	// 		Template query rules into ClusterPolicy resource (Create one file per control and place in $PWD)(TODO: Function)
-	// 		Pass generated policy path to applyCommandHelper
-	//		Process Pass/Fail and append to object map (under control) (TODO: Step)
-	// Generate OSCAL document w/ object map and results (TODO: Function)
 
-	generateReport(complianceReports)
-
-	//printReportOrViolation(policyReport, rc, resourcePaths, len(resources), skipInvalidPolicies, stdin, pvInfos)
+	if !dryRun {
+		generateReport(complianceReports)
+	}
 
 	return nil
 }
@@ -429,52 +431,6 @@ func checkMutateLogPath(mutateLogPath string) (mutateLogPathIsDir bool, err erro
 		}
 	}
 	return mutateLogPathIsDir, err
-}
-
-// printReportOrViolation - printing policy report/violations
-func printReportOrViolation(policyReport bool, rc *common.ResultCounts, resourcePaths []string, resourcesLen int, skipInvalidPolicies SkippedInvalidPolicies, stdin bool, pvInfos []policyreport.Info) {
-	divider := "----------------------------------------------------------------------"
-
-	if len(skipInvalidPolicies.skipped) > 0 {
-		fmt.Println(divider)
-		fmt.Println("Policies Skipped (as required variables are not provided by the user):")
-		for i, policyName := range skipInvalidPolicies.skipped {
-			fmt.Printf("%d. %s\n", i+1, policyName)
-		}
-		fmt.Println(divider)
-	}
-	if len(skipInvalidPolicies.invalid) > 0 {
-		fmt.Println(divider)
-		fmt.Println("Invalid Policies:")
-		for i, policyName := range skipInvalidPolicies.invalid {
-			fmt.Printf("%d. %s\n", i+1, policyName)
-		}
-		fmt.Println(divider)
-	}
-
-	if policyReport {
-		resps := buildPolicyReports(pvInfos)
-		if len(resps) > 0 || resourcesLen == 0 {
-			fmt.Println(divider)
-			fmt.Println("POLICY REPORT:")
-			fmt.Println(divider)
-			report, _ := generateCLIRaw(resps)
-			yamlReport, _ := yaml1.Marshal(report)
-			fmt.Println(string(yamlReport))
-		} else {
-			fmt.Println(divider)
-			fmt.Println("POLICY REPORT: skip generating policy report (no validate policy found/resource skipped)")
-		}
-	} else {
-		if !stdin {
-			fmt.Printf("\npass: %d, fail: %d, warn: %d, error: %d, skip: %d \n",
-				rc.Pass, rc.Fail, rc.Warn, rc.Error, rc.Skip)
-		}
-	}
-
-	if rc.Fail > 0 || rc.Error > 0 {
-		os.Exit(1)
-	}
 }
 
 // createFileOrFolder - creating file or folder according to path provided
