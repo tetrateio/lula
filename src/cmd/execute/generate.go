@@ -1,4 +1,4 @@
-package cmd
+package execute
 
 import (
 	policyreportv1alpha2 "github.com/kyverno/kyverno/api/policyreport/v1alpha2"
