@@ -48,16 +48,31 @@ type SkippedInvalidPolicies struct {
 	invalid []string
 }
 
+var executeHelp = `
+To execute on a cluster:
+	compliance-auditor execute ./oscal-component.yaml
+
+To execute on a resource:
+	compliance-auditor execute ./oscal-component.yaml -r resource.yaml
+
+To execute without creation of any report files
+	compliance-auditor execute ./oscal-component.yaml -d
+`
+
 var resourcePaths []string
 var cluster, dryRun bool
 
 var executeCmd = &cobra.Command{
-	Use:   "execute",
-	Short: "execute",
-	Long:  `execute`,
+	Use:     "execute",
+	Short:   "execute",
+	Example: executeHelp,
 	Run: func(cmd *cobra.Command, componentDefinitionPaths []string) {
 		// Conduct further error checking here (IE flags/arguments)
-		// Conduct other pre-flight checks (Does the file exist?)
+		if len(componentDefinitionPaths) == 0 {
+			fmt.Println("Path to the local OSCAL file must be present")
+			os.Exit(1)
+		}
+
 		err := conductExecute(componentDefinitionPaths, resourcePaths, dryRun)
 		if err != nil {
 			log.Log.Error(err, "error string")
@@ -128,8 +143,7 @@ func conductExecute(componentDefinitionPaths []string, resourcePaths []string, d
 
 		complianceReports = append(complianceReports, currentReport)
 
-		fmt.Printf("UUID: %v / Status: %v\n", implementedReq.UUID, result)
-		fmt.Printf("Resources Passing: %v / Resources Failing: %v\n", rc.Pass, rc.Fail)
+		fmt.Printf("UUID: %v\n\tResources Passing: %v\n\tResources Failing: %v\n\tStatus: %v\n", implementedReq.UUID, rc.Pass, rc.Fail, result)
 	}
 	if err != nil {
 		log.Log.Error(err, "error string")
@@ -145,6 +159,12 @@ func conductExecute(componentDefinitionPaths []string, resourcePaths []string, d
 // Open files and attempt to unmarshall to oscal component definition structs
 func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefinitions []types.OscalComponentDefinition, err error) {
 	for _, path := range filepaths {
+		_, err := os.Stat(path)
+		if os.IsNotExist(err) {
+			fmt.Printf("Path: %v does not exist - unable to digest document\n", path)
+			continue
+		}
+
 		rawDoc, err := os.ReadFile(path)
 		check(err)
 
