@@ -7,11 +7,11 @@ Cloud Native Infrastructure, Platforms, and applications can establish OSCAL doc
 This can be well established and regulated standards such as NIST 800-53. It can also be best practices, Enterprise Standards, or simply team development standards that need to be continuously monitored and validated.
 
 ## Hows it work?
-The primary functionality is leveraging [Kyverno CLI/Engine]().
+The primary functionality is leveraging [Kyverno CLI/Engine](https://kyverno.io/docs/kyverno-cli/).
 Compliance Auditor:
 - Ingests a `oscal-component.yaml` and creates an object in memory
 - Queries all `implemented-requirements` for a `rules` field
-    - This rules block is a strict port from the rules of a [Kyverno ClusterPolicy]() resource
+    - This rules block is a strict port from the rules of a [Kyverno ClusterPolicy](https://kyverno.io/docs/kyverno-policies/) resource
 - If a rules field exists:
     - Generate a `ClusterPolicy` resource on the filesystem
     - Execute the `applyCommandHelper` function from Kyverno CLI
