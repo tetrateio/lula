@@ -293,9 +293,25 @@ component-definition:
         rules:
         - name: istio-controlplane_AC-4(istio-injection-enabled)
           match:
-            resources:
+            any:
+            - resources:
                 kinds: 
                 - Pod
+          exclude:
+            any:
+            - resources:
+                namespaces:
+                - kube-*
+                - flux-system
+                - istio-system
+                - istio-operator
+                - gatekeeper-system
+                - bigbang
+            - resources:
+                kinds:
+                - deployment
+                - statefulset
+                - daemonset
           validate:
             message: "Every pod should have istio-proxy"
             pattern:
