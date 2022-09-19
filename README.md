@@ -22,8 +22,17 @@ Compliance Auditor:
 - Generate a report of the findings (`Pass` or `fail` for each control) on the filesystem (optional - can be run with `--dry-run` in order to not write to filesystem)
 
 ## Getting Started
-### Demo
-The following will allow you to setup a simple demo of the tool to querie against your existing cluster:
+
+## Demo
+
+### Static Manifest Demo
+![Resource Demo](./images/resource-demo.gif)
+
+
+### Live Cluster Demo
+![Cluster Demo](./images/cluster-demo.gif)
+
+### Try it out!
 
 #### Dependencies:
 - A running Kubernetes cluster
