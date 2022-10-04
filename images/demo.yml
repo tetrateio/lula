@@ -1,0 +1,295 @@
+# The configurations that used for the recording, feel free to edit them
+config:
+
+  # Specify a command to be executed
+  # like `/bin/bash -l`, `ls`, or any other commands
+  # the default is bash for Linux
+  # or powershell.exe for Windows
+  command: bash -l
+  
+  # Specify the current working directory path
+  # the default is the current working directory path
+  cwd: /Users/brandtkeller/repos/DU/compliance-auditor
+  
+  # Export additional ENV variables
+  env:
+    recording: true
+  
+  # Explicitly set the number of columns
+  # or use `auto` to take the current
+  # number of columns of your shell
+  cols: 191
+  
+  # Explicitly set the number of rows
+  # or use `auto` to take the current
+  # number of rows of your shell
+  rows: 57
+  
+  # Amount of times to repeat GIF
+  # If value is -1, play once
+  # If value is 0, loop indefinitely
+  # If value is a positive number, loop n times
+  repeat: 0
+  
+  # Quality
+  # 1 - 100
+  quality: 100
+  
+  # Delay between frames in ms
+  # If the value is `auto` use the actual recording delays
+  frameDelay: auto
+  
+  # Maximum delay between frames in ms
+  # Ignored if the `frameDelay` isn't set to `auto`
+  # Set to `auto` to prevent limiting the max idle time
+  maxIdleTime: 2000
+  
+  # The surrounding frame box
+  # The `type` can be null, window, floating, or solid`
+  # To hide the title use the value null
+  # Don't forget to add a backgroundColor style with a null as type
+  frameBox:
+    type: floating
+    title: Terminalizer
+    style:
+      border: 0px black solid
+      # boxShadow: none
+      # margin: 0px
+  
+  # Add a watermark image to the rendered gif
+  # You need to specify an absolute path for
+  # the image on your machine or a URL, and you can also
+  # add your own CSS styles
+  watermark:
+    imagePath: null
+    style:
+      position: absolute
+      right: 15px
+      bottom: 15px
+      width: 100px
+      opacity: 0.9
+  
+  # Cursor style can be one of
+  # `block`, `underline`, or `bar`
+  cursorStyle: block
+  
+  # Font family
+  # You can use any font that is installed on your machine
+  # in CSS-like syntax
+  fontFamily: "Monaco, Lucida Console, Ubuntu Mono, Monospace"
+  
+  # The size of the font
+  fontSize: 12
+  
+  # The height of lines
+  lineHeight: 1
+  
+  # The spacing between letters
+  letterSpacing: 0
+  
+  # Theme
+  theme:
+    background: "transparent"
+    foreground: "#afafaf"
+    cursor: "#c7c7c7"
+    black: "#232628"
+    red: "#fc4384"
+    green: "#b3e33b"
+    yellow: "#ffa727"
+    blue: "#75dff2"
+    magenta: "#ae89fe"
+    cyan: "#708387"
+    white: "#d5d5d0"
+    brightBlack: "#626566"
+    brightRed: "#ff7fac"
+    brightGreen: "#c8ed71"
+    brightYellow: "#ebdf86"
+    brightBlue: "#75dff2"
+    brightMagenta: "#ae89fe"
+    brightCyan: "#b1c6ca"
+    brightWhite: "#f9f9f4"
+  
+# Records, feel free to edit them
+records:
+  - delay: 300
+    content: "\e[?2004hbrandts-MacBook-Pro:compliance-auditor brandtkeller$ "
+  - delay: 898
+    content: k
+  - delay: 223
+    content: ub
+  - delay: 61
+    content: e
+  - delay: 150
+    content: c
+  - delay: 149
+    content: t
+  - delay: 99
+    content: l
+  - delay: 68
+    content: ' '
+  - delay: 98
+    content: g
+  - delay: 50
+    content: e
+  - delay: 56
+    content: t
+  - delay: 94
+    content: ' '
+  - delay: 118
+    content: p
+  - delay: 165
+    content: o
+  - delay: 371
+    content: "\r\n\e[?2004l\r"
+  - delay: 250
+    content: "NAME   READY   STATUS    RESTARTS   AGE\r\ntest   1/1     Running   0          3m46s\r\n\e[?2004hbrandts-MacBook-Pro:compliance-auditor brandtkeller$ "
+  - delay: 3284
+    content: kubectl get po
+  - delay: 490
+    content: ' '
+  - delay: 213
+    content: '-'
+  - delay: 130
+    content: A
+  - delay: 196
+    content: "\r\n\e[?2004l\r"
+  - delay: 296
+    content: "NAMESPACE           NAME                                                       READY   STATUS    RESTARTS      AGE\r\nkube-system         local-path-provisioner-7b7dc8d6f5-zkz5f                    1/1     Running   0             95m\r\nkube-system         coredns-b96499967-v2nck                                    1/1     Running   0             95m\r\nflux-system         notification-controller-f64bbfd68-hfc5t                    1/1     Running   0             87m\r\nflux-system         helm-controller-58d7d84b7-qlkk7                            1/1     Running   0             87m\r\nflux-system         source-controller-7b96c7886f-tgcpf                         1/1     Running   0             87m\r\nflux-system         kustomize-controller-689c4c66dc-bl2gn                      1/1     Running   0             87m\r\ngatekeeper-system   gatekeeper-controller-manager-95bcbc64b-pjpww              1/1     Running   0             79m\r\ngatekeeper-system   gatekeeper-audit-95dd85d-2svxr                             1/1     Running   0             79m\r\nistio-operator      istio-operator-594c98ddd6-pgsvl                            1/1     Running   0             76m\r\nistio-system        istiod-7845df7765-trt2p                                    1/1     Running   0             76m\r\nkube-system         svclb-public-ingressgateway-ac1fd3ba-7778v                 3/3     Running   0             76m\r\nkube-system         svclb-public-ingressgateway-ac1fd3ba-7g48x                 3/3     Running   0             76m\r\nkube-system         svclb-public-ingressgateway-ac1fd3ba-x29zm                 3/3     Running   0             76m\r\nkube-system         svclb-public-ingressgateway-ac1fd3ba-bgpls                 3/3     Running   0             76m\r\nistio-system        public-ingressgateway-7c87595c5b-rnbd8                     1/1     Running   0             76m\r\neck-operator        elastic-operator-0                                         2/2     Running   1 (74m ago)   75m\r\nmonitoring          monitoring-monitoring-prometheus-node-exporter-k78nb       2/2     Running   0             73m\r\nmonitoring          monitoring-monitoring-kube-operator-799f7794fc-6ltld       2/2     Running   0             73m\r\nmonitoring          monitoring-monitoring-prometheus-node-exporter-4xtss       2/2     Running   0             73m\r\nlogging             logging-ek-es-master-0                                     2/2     Running   0             74m\r\nlogging             logging-ek-es-data-0                                       2/2     Running   0             74m\r\nmonitoring          monitoring-monitoring-prometheus-node-exporter-djcr5       2/2     Running   0             73m\r\nmonitoring          prometheus-monitoring-monitoring-kube-prometheus-0         3/3     Running   0             72m\r\nlogging             logging-ek-kb-797c5c494d-55bx2                             2/2     Running   0             74m\r\nmonitoring          alertmanager-monitoring-monitoring-kube-alertmanager-0     3/3     Running   1 (72m ago)   72m\r\nmonitoring          monitoring-monitoring-kube-state-metrics-9fd9bbcdb-96ljn   2/2     Running   0             73m\r\nmonitoring          monitoring-monitoring-prometheus-node-exporter-xmxcx       2/2     Running   0             73m\r\nmonitoring          monitoring-monitoring-grafana-575d4b65d5-nmzdx             4/4     Running   0             73m\r\nlogging             logging-fluent-bit-gcmt7                                   2/2     Running   0             70m\r\ncluster-auditor     opa-exporter-79879b6c7c-xmfpq                              2/2     Running   0             70m\r\nlogging             logging-fluent-bit-qj4bc                                   2/2     Running   0             70m\r\nlogging             logging-fluent-bit-5xsjl                                   2/2     Running   0             70m\r\nlogging             logging-fluent-bit-ft4d8                                   2/2     Running   0             70m\r\nkiali               kiali-kiali-kiali-operator-655c557dbc-xzwm2                2/2     Running   0             70m\r\nmetrics-server      metrics-server-5f4cd599fb-pw6c7                            2/2     Running   0             70m\r\nmetrics-server      metrics-server-5f4cd599fb-rlnc5                            2/2     Running   0             70m\r\njaeger              jaeger-jaeger-jaeger-operator-588cffd79c-wvq67             2/2     Running   0             68m\r\njaeger              jaeger-586874bbf9-d287t                                    2/2     Running   2 (66m ago)   66m\r\nkiali               kiali-75bdd8c4d6-r5ksz                                     2/2     Running   0             62m\r\ndefault             test                                                       1/1     Running   0             3m51s\r\n\e[?2004hbrandts-MacBook-Pro:compliance-auditor brandtkeller$ "
+  - delay: 2572
+    content: .
+  - delay: 91
+    content: /
+  - delay: 225
+    content: c
+  - delay: 89
+    content: o
+  - delay: 73
+    content: m
+  - delay: 161
+    content: 'pliance-auditor '
+  - delay: 1187
+    content: e
+  - delay: 187
+    content: x
+  - delay: 158
+    content: e
+  - delay: 148
+    content: c
+  - delay: 124
+    content: u
+  - delay: 79
+    content: t
+  - delay: 30
+    content: e
+  - delay: 131
+    content: ' '
+  - delay: 1100
+    content: t
+  - delay: 43
+    content: e
+  - delay: 234
+    content: st/
+  - delay: 281
+    content: c
+  - delay: 131
+    content: l
+  - delay: 92
+    content: i/
+  - delay: 369
+    content: c
+  - delay: 76
+    content: o
+  - delay: 84
+    content: m
+  - delay: 62
+    content: ponent-definitions/
+  - delay: 1165
+    content: c
+  - delay: 302
+    content: "\b\e[K"
+  - delay: 233
+    content: o
+  - delay: 85
+    content: c
+  - delay: 172
+    content: "\a"
+  - delay: 493
+    content: "\b\e[K"
+  - delay: 273
+    content: 'scal-component.yaml '
+  - delay: 1965
+    content: "\r\n\e[?2004l\r"
+  - delay: 804
+    content: "\r\nApplying 1 policy to 54 resources... \r\n(Total number of result count may vary as the policy is mutated by Kyverno. To check the mutated policy please try with log level 5)\r\n"
+  - delay: 670
+    content: "UUID: D7717A9B-7604-45EF-8DCF-EE4DF0417F9C\r\n\tResources Passing: 38\r\n\tResources Failing: 1\r\n\tStatus: Fail\r\n"
+  - delay: 8561
+    content: "Assessment sent to GRC tool\r\n"
+  - delay: 8
+    content: "\e[?2004hbrandts-MacBook-Pro:compliance-auditor brandtkeller$ "
+  - delay: 3819
+    content: k
+  - delay: 64
+    content: ' '
+  - delay: 103
+    content: g
+  - delay: 248
+    content: d
+  - delay: 533
+    content: "\b\e[K"
+  - delay: 141
+    content: "\b\e[K"
+  - delay: 78
+    content: d
+  - delay: 158
+    content: e
+  - delay: 47
+    content: l
+  - delay: 116
+    content: e
+  - delay: 148
+    content: t
+  - delay: 98
+    content: e
+  - delay: 134
+    content: ' '
+  - delay: 158
+    content: p
+  - delay: 178
+    content: o
+  - delay: 100
+    content: ' '
+  - delay: 415
+    content: t
+  - delay: 32
+    content: e
+  - delay: 192
+    content: s
+  - delay: 118
+    content: t
+  - delay: 191
+    content: "\r\n\e[?2004l\r"
+  - delay: 225
+    content: "pod \"test\" deleted\r\n"
+  - delay: 827
+    content: "\e[?2004hbrandts-MacBook-Pro:compliance-auditor brandtkeller$ "
+  - delay: 1806
+    content: k delete po test
+  - delay: 144
+    content: "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b./compliance-auditor execute test/cli/component-definitions/oscal-component.yaml "
+  - delay: 149
+    content: "\r\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[C\e[Ckubectl get po -A\e[K"
+  - delay: 486
+    content: "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b./compliance-auditor execute test/cli/component-definitions/oscal-component.yaml "
+  - delay: 662
+    content: "\r\n\e[?2004l\r"
+  - delay: 849
+    content: "\r\nApplying 1 policy to 53 resources... \r\n(Total number of result count may vary as the policy is mutated by Kyverno. To check the mutated policy please try with log level 5)\r\n"
+  - delay: 660
+    content: "UUID: D7717A9B-7604-45EF-8DCF-EE4DF0417F9C\r\n\tResources Passing: 38\r\n\tResources Failing: 0\r\n\tStatus: Pass\r\n"
+  - delay: 7921
+    content: "Assessment sent to GRC tool\r\n"
+  - delay: 10
+    content: "\e[?2004hbrandts-MacBook-Pro:compliance-auditor brandtkeller$ "
+  - delay: 1173
+    content: "\e[?2004l\r\r\nlogout\r\n"

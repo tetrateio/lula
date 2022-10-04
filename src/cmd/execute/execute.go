@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -150,7 +151,19 @@ func conductExecute(componentDefinitionPaths []string, resourcePaths []string, d
 	}
 
 	if !dryRun {
-		generateReport(complianceReports)
+		file, err := generateReport(complianceReports)
+		if err != nil {
+			log.Log.Error(err, "error string")
+		}
+		fmt.Println("Sending assessment to GRC tool")
+		cmd := exec.Command("python3", "./main.py", file)
+
+		err = cmd.Run()
+
+		if err != nil {
+			fmt.Println("Error running python")
+		}
+		fmt.Println("Assessment sent to GRC tool")
 	}
 
 	return nil
@@ -237,12 +250,12 @@ func generatePolicy(implementedRequirement types.ImplementedRequirementsCustom) 
 // This is the OSCAL document generation for final output.
 // This should include some ability to consolidate controls met in multiple input documents under single control entries
 // This should include fields that reference the source of the control to the original document ingested
-func generateReport(compiledReport []types.ComplianceReport) (err error) {
+func generateReport(compiledReport []types.ComplianceReport) (fileName string, err error) {
 	reportData, err := yaml1.Marshal(&compiledReport)
 	check(err)
 
 	currentTime := time.Now()
-	fileName := "compliance_report-" + currentTime.Format("01-02-2006-15:04:05") + ".yaml"
+	fileName = "compliance_report-" + currentTime.Format("01-02-2006-15:04:05") + ".yaml"
 
 	err = ioutil.WriteFile(fileName, reportData, 0644)
 	check(err)
