@@ -2,19 +2,20 @@
 
 Just to re-iterate what has been mentioned:
 - (Navigate to the repo1 Big Bang group)
-    - We have this concept on the Big Bang platform - that any one tool can bring with it controls that it satisfies that the environment can leverage
+    - We have this concept on the Big Bang platform - It's a collection of tool packages that provide a baseline implementation for the DoD DevSecOps reference design
+    - Any one tool can bring with it controls that it satisfies that the environment can leverage
     - A package provides a tool-relevant universe of controls that CAN be satisfied to some extent by the tool itself
         - I'd call this the first pillar of three for compliance as code - it creates an machine-readable document for inheritance by the consumers - which is version-controlled.
     - These component definitions can be aggregated such that the platform can provide a subset of controls immediately inheritable
         - This doesn't mean they are inheritable - just that they can be if properly configured. 
 
 - (Navigate to RegScale)
+    - Moving over to visualization - We've partnered with RegScale on this presentation to really show the power of OSCAL  
     - We've then taken that machine-readable OSCAL component definition and imported it into GRC tooling for visualization
         - Here i'd call visualization as the third pillar (bear with me on why I skipped the 2nd)
             - Visualization allows multiple personas to display large amounts of data in ways that cna be easily traced between one-another
             - It also provides a consolidated view
     - Tooling such as RegScale (which is optimized around OSCAL) can play a huge role in platform releases and tracing control updates.
-    - Partnering with RegScale for this demonstration allows 
     - API driven tooling will support automation in many ways
         - Uploading the static artifacts (version controlled OSCAL component definitions)
         - Supporting 3rd party tools to integrate for automation
