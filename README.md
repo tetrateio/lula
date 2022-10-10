@@ -1,6 +1,6 @@
 # Compliance-Auditor
 
-Compliance Auditor is a tool written to bridge the gap between expected configruation required for compliance and **_actual_** configuration.
+Compliance Auditor is a tool written to bridge the gap between expected configuration required for compliance and **_actual_** configuration.
 
 Cloud Native Infrastructure, Platforms, and applications can establish OSCAL documents that live beside source-of-truth code bases. Providing an inheritance model for when a control that the technology can satisfy _IS_ satisfied in a live-environment. 
 
