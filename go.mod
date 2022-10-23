@@ -1,4 +1,4 @@
-module github.com/defenseunicorns/compliance-auditor
+module github.com/defenseunicorns/lula
 
 go 1.19
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/defenseunicorns/compliance-auditor/src/cmd"
+	"github.com/defenseunicorns/lula/src/cmd"
 )
 
 func main() {
