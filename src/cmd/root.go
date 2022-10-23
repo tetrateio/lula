@@ -4,13 +4,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/defenseunicorns/compliance-auditor/src/cmd/execute"
+	"github.com/defenseunicorns/lula/src/cmd/execute"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "compliance-auditor",
-	Short: "compliance-auditor",
-	Long:  `compliance-auditor`,
+	Use:   "lula",
+	Short: "lula",
+	Long:  `lula`,
 }
 
 func Execute() {

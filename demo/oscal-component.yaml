@@ -12,14 +12,14 @@ component-definition:
       type: organization
       name: Defense Unicorns
       links:
-      - href: <https://github.com/defenseunicorns/compliance-auditor>
+      - href: <https://github.com/defenseunicorns/lula>
         rel: website
   components:
   - uuid: A9D5204C-7E5B-4C43-BD49-34DF759B9F04
     type: software
-    title: Compliance Auditor
+    title: lula
     description: |
-      Defense Unicorn Compliance Auditor
+      Defense Unicorns lula
     purpose: Validate compliance controls
     responsible-roles:
     - role-id: provider

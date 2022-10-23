@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	types "github.com/defenseunicorns/compliance-auditor/src/internal/types"
+	types "github.com/defenseunicorns/lula/src/internal/types"
 	yaml2 "github.com/ghodss/yaml"
 	"github.com/go-git/go-billy/v5/memfs"
 	v1 "github.com/kyverno/kyverno/api/kyverno/v1"
@@ -50,13 +50,13 @@ type SkippedInvalidPolicies struct {
 
 var executeHelp = `
 To execute on a cluster:
-	compliance-auditor execute ./oscal-component.yaml
+	lula execute ./oscal-component.yaml
 
 To execute on a resource:
-	compliance-auditor execute ./oscal-component.yaml -r resource.yaml
+	lula execute ./oscal-component.yaml -r resource.yaml
 
 To execute without creation of any report files
-	compliance-auditor execute ./oscal-component.yaml -d
+	lula execute ./oscal-component.yaml -d
 `
 
 var resourcePaths []string
