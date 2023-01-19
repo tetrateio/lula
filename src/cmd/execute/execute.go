@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/kyverno/kyverno/pkg/openapi"
 	policy2 "github.com/kyverno/kyverno/pkg/policy"
 	"github.com/kyverno/kyverno/pkg/policyreport"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -59,6 +61,11 @@ To execute without creation of any report files
 	lula execute ./oscal-component.yaml -d
 `
 
+var generateHelp = `
+To generate kyverno policies:
+	lula generate ./oscal-component.yaml -o ./out
+`
+
 var resourcePaths []string
 var cluster, dryRun bool
 
@@ -80,11 +87,36 @@ var executeCmd = &cobra.Command{
 	},
 }
 
-func Command() *cobra.Command {
+func ExecuteCommand() *cobra.Command {
 	executeCmd.Flags().StringArrayVarP(&resourcePaths, "resource", "r", []string{}, "Path to resource files")
 	executeCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Specifies whether to write reports to filesystem")
 
 	return executeCmd
+}
+
+var outDirectory string
+
+var generateCmd = &cobra.Command{
+	Use:     "generate",
+	Short:   "generate",
+	Example: generateHelp,
+	Run: func(cmd *cobra.Command, componentDefinitionPaths []string) {
+		if len(componentDefinitionPaths) == 0 {
+			fmt.Println("Path to the local OSCAL file must be present")
+			os.Exit(1)
+		}
+
+		err := conductGenerate(componentDefinitionPaths, outDirectory)
+		if err != nil {
+			os.Exit(1)
+		}
+	},
+}
+
+func GenerateCommand() *cobra.Command {
+	generateCmd.Flags().StringVarP(&outDirectory, "out", "o", "./out/", "Path to output kyverno policies")
+
+	return generateCmd
 }
 
 func check(e error) {
@@ -111,7 +143,7 @@ func conductExecute(componentDefinitionPaths []string, resourcePaths []string, d
 	implementedReqs, err := getImplementedReqs(oscalComponentDefinitions)
 	for _, implementedReq := range implementedReqs {
 
-		path, err := generatePolicy(implementedReq)
+		path, err := generatePolicy(implementedReq, "./")
 		if err != nil {
 			log.Log.Error(err, "error string")
 		}
@@ -153,6 +185,35 @@ func conductExecute(componentDefinitionPaths []string, resourcePaths []string, d
 		generateReport(complianceReports)
 	}
 
+	return nil
+}
+
+func conductGenerate(componentDefinitionPaths []string, outDirectory string) error {
+	err := os.Mkdir(outDirectory, 0755)
+	if err != nil {
+		logrus.Error(err, "error creating output directory")
+		return err
+	}
+
+	oscalComponentDefinitions, err := oscalComponentDefinitionsFromPaths(componentDefinitionPaths)
+	if err != nil {
+		logrus.Error(err, "error getting oscal component definitions")
+		return err
+	}
+
+	implementedReqs, err := getImplementedReqs(oscalComponentDefinitions)
+	if err != nil {
+		logrus.Error(err, "error getting implemented requirements")
+		return err
+	}
+
+	for _, implementedReq := range implementedReqs {
+		_, err := generatePolicy(implementedReq, outDirectory)
+		if err != nil {
+			logrus.Error(err, "error generating policy")
+			return err
+		}
+	}
 	return nil
 }
 
@@ -201,7 +262,7 @@ func getImplementedReqs(componentDefinitions []types.OscalComponentDefinition) (
 // Turn a ruleset into a ClusterPolicy resource for ability to use Kyverno applyCommandHelper without modification
 // This needs to copy the rules into a Cluster Policy resource (yaml) and write to individual files
 // Kyverno will perform applying these and generating pass/fail results
-func generatePolicy(implementedRequirement types.ImplementedRequirementsCustom) (policyPath string, err error) {
+func generatePolicy(implementedRequirement types.ImplementedRequirementsCustom, outDir string) (policyPath string, err error) {
 
 	if len(implementedRequirement.Rules) != 0 {
 		// fmt.Printf("%v", implementedRequirement.Rules[0].Validation.RawPattern)
@@ -224,11 +285,12 @@ func generatePolicy(implementedRequirement types.ImplementedRequirementsCustom) 
 		}
 
 		fileName := implementedRequirement.UUID + ".yaml"
-		err = ioutil.WriteFile(fileName, yamlData, 0644)
+		policyPath = path.Join(outDir, fileName)
+		err = ioutil.WriteFile(policyPath, yamlData, 0644)
 		if err != nil {
+			logrus.Error(err)
 			panic("Unable to write data into the file")
 		}
-		policyPath = "./" + implementedRequirement.UUID + ".yaml"
 	}
 
 	return
