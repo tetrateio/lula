@@ -191,26 +191,26 @@ func conductExecute(componentDefinitionPaths []string, resourcePaths []string, d
 func conductGenerate(componentDefinitionPaths []string, outDirectory string) error {
 	err := os.Mkdir(outDirectory, 0755)
 	if err != nil {
-		logrus.Error(err, "error creating output directory")
+		logrus.Error("error creating output directory: ", err)
 		return err
 	}
 
 	oscalComponentDefinitions, err := oscalComponentDefinitionsFromPaths(componentDefinitionPaths)
 	if err != nil {
-		logrus.Error(err, "error getting oscal component definitions")
+		logrus.Error("error getting oscal component definitions: ", err)
 		return err
 	}
 
 	implementedReqs, err := getImplementedReqs(oscalComponentDefinitions)
 	if err != nil {
-		logrus.Error(err, "error getting implemented requirements")
+		logrus.Error("error getting implemented requirements: ", err)
 		return err
 	}
 
 	for _, implementedReq := range implementedReqs {
 		_, err := generatePolicy(implementedReq, outDirectory)
 		if err != nil {
-			logrus.Error(err, "error generating policy")
+			logrus.Error("error generating policy: ", err)
 			return err
 		}
 	}
