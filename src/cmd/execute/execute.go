@@ -189,7 +189,7 @@ func conductExecute(componentDefinitionPaths []string, resourcePaths []string, d
 }
 
 func conductGenerate(componentDefinitionPaths []string, outDirectory string) error {
-	err := os.Mkdir(outDirectory, 0755)
+	err := os.MkdirAll(outDirectory, 0755)
 	if err != nil {
 		logrus.Error("error creating output directory: ", err)
 		return err
