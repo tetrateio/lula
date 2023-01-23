@@ -266,13 +266,14 @@ func generatePolicy(implementedRequirement types.ImplementedRequirementsCustom, 
 
 	if len(implementedRequirement.Rules) != 0 {
 		// fmt.Printf("%v", implementedRequirement.Rules[0].Validation.RawPattern)
+		policyName := strings.ToLower(implementedRequirement.UUID)
 		policy := v1.ClusterPolicy{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "ClusterPolicy",
 				APIVersion: "kyverno.io/v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: implementedRequirement.UUID,
+				Name: policyName,
 			},
 			Spec: v1.Spec{
 				Rules: implementedRequirement.Rules,
@@ -284,7 +285,7 @@ func generatePolicy(implementedRequirement types.ImplementedRequirementsCustom, 
 			fmt.Printf("Error while Marshaling. %v", err)
 		}
 
-		fileName := implementedRequirement.UUID + ".yaml"
+		fileName := policyName + ".yaml"
 		policyPath = path.Join(outDir, fileName)
 		err = ioutil.WriteFile(policyPath, yamlData, 0644)
 		if err != nil {
