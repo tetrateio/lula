@@ -155,9 +155,11 @@ func check(e error) {
 }
 
 func conductExecute(componentDefinitionPaths []string, resourcePaths []string, dryRun bool) error {
-	// cluster := true
+	applyCommandConfig := &ApplyCommandConfig{}
 	if len(resourcePaths) > 0 {
-		cluster = false
+		applyCommandConfig.Cluster = false
+	} else {
+		applyCommandConfig.Cluster = true
 	}
 	// unmarshall all documents to types.OscalComponentDocument into a slice of component documents
 	// Declare empty slice of oscalComponentDocuments
@@ -184,27 +186,28 @@ func conductExecute(componentDefinitionPaths []string, resourcePaths []string, d
 		// For right now, we are just passing in a single path/policy as we can use the applyCommandHelper function to provide results for parsing
 		// We don't want to pass multiple controls at once currently - as the command will aggregate findings and be unable to decipher between
 		// when a control passes or fails individually?
-		// rc, _, _, _, err := applyCommandHelper(resourcePaths, "", cluster, true, "", "", "", "", []string{path}, false, false)
-		// if err != nil {
-		// 	return err
-		// }
-		// // Cleanup the policies - TODO: Introduce a flag that retains policies under a new directory
-		// os.Remove(path)
-		// var currentReport types.ComplianceReport
+		applyCommandConfig.PolicyPaths = []string{path}
+		rc, _, _, _, err := applyCommandConfig.applyCommandHelper()
+		if err != nil {
+			return err
+		}
+		// Cleanup the policies - TODO: Introduce a flag that retains policies under a new directory
+		os.Remove(path)
+		var currentReport types.ComplianceReport
 
-		// var result string
-		// if rc.Pass > 0 && rc.Fail == 0 {
-		// 	result = "Pass"
-		// } else {
-		// 	result = "Fail"
-		// }
+		var result string
+		if rc.Pass > 0 && rc.Fail == 0 {
+			result = "Pass"
+		} else {
+			result = "Fail"
+		}
 
-		// currentReport.SourceRequirements = implementedReq
-		// currentReport.Result = result
+		currentReport.SourceRequirements = implementedReq
+		currentReport.Result = result
 
-		// complianceReports = append(complianceReports, currentReport)
+		complianceReports = append(complianceReports, currentReport)
 
-		// fmt.Printf("UUID: %v\n\tResources Passing: %v\n\tResources Failing: %v\n\tStatus: %v\n", implementedReq.UUID, rc.Pass, rc.Fail, result)
+		fmt.Printf("UUID: %v\n\tResources Passing: %v\n\tResources Failing: %v\n\tStatus: %v\n", implementedReq.UUID, rc.Pass, rc.Fail, result)
 	}
 	if err != nil {
 		log.Log.Error(err, "error string")
