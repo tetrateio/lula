@@ -158,6 +158,7 @@ func conductExecute(componentDefinitionPaths []string, resourcePaths []string, d
 	applyCommandConfig := &ApplyCommandConfig{}
 	if len(resourcePaths) > 0 {
 		applyCommandConfig.Cluster = false
+		applyCommandConfig.ResourcePaths = resourcePaths
 	} else {
 		applyCommandConfig.Cluster = true
 	}
