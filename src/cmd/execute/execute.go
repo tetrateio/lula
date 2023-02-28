@@ -251,7 +251,7 @@ func conductGenerate(componentDefinitionPaths []string, outDirectory string) err
 }
 
 // Open files and attempt to unmarshall to oscal component definition structs
-func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefinitions []types.OscalComponentDefinition, err error) {
+func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefinitions []types.OscalComponentDefinitionModel, err error) {
 	for _, path := range filepaths {
 		_, err := os.Stat(path)
 		if os.IsNotExist(err) {
@@ -262,7 +262,7 @@ func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefin
 		rawDoc, err := os.ReadFile(path)
 		check(err)
 
-		var oscalComponentDefinition types.OscalComponentDefinition
+		var oscalComponentDefinition types.OscalComponentDefinitionModel
 
 		jsonDoc, err := yaml2.YAMLToJSON(rawDoc)
 		if err != nil {
@@ -281,7 +281,7 @@ func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefin
 // Parse the ingested documents (POC = 1) for applicable information
 // Knowns = this will be a yaml file
 // return a slice of Control objects
-func getImplementedReqs(componentDefinitions []types.OscalComponentDefinition) (implementedReqs []types.ImplementedRequirementsCustom, err error) {
+func getImplementedReqs(componentDefinitions []types.OscalComponentDefinitionModel) (implementedReqs []types.ImplementedRequirement, err error) {
 	for _, componentDefinition := range componentDefinitions {
 		for _, component := range componentDefinition.ComponentDefinition.Components {
 			for _, controlImplementation := range component.ControlImplementations {
@@ -295,7 +295,7 @@ func getImplementedReqs(componentDefinitions []types.OscalComponentDefinition) (
 // Turn a ruleset into a ClusterPolicy resource for ability to use Kyverno applyCommandHelper without modification
 // This needs to copy the rules into a Cluster Policy resource (yaml) and write to individual files
 // Kyverno will perform applying these and generating pass/fail results
-func generatePolicy(implementedRequirement types.ImplementedRequirementsCustom, outDir string) (policyPath string, err error) {
+func generatePolicy(implementedRequirement types.ImplementedRequirement, outDir string) (policyPath string, err error) {
 
 	if len(implementedRequirement.Rules) != 0 {
 		// fmt.Printf("%v", implementedRequirement.Rules[0].Validation.RawPattern)
