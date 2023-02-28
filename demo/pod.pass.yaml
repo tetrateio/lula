@@ -13,3 +13,48 @@ spec:
         - "3600"
       image: busybox
       name: pods-simple-container
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-pod
+  namespace: test
+  labels: 
+    foo: bar
+spec:
+  containers:
+    - command:
+        - sleep
+        - "3600"
+      image: busybox
+      name: pods-simple-container
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-pod
+  namespace: test1
+  labels: 
+    foo: bar
+spec:
+  containers:
+    - command:
+        - sleep
+        - "3600"
+      image: busybox
+      name: pods-simple-container
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-pod
+  namespace: test2
+  labels: 
+    foo: bar
+spec:
+  containers:
+    - command:
+        - sleep
+        - "3600"
+      image: busybox
+      name: pods-simple-container

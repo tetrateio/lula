@@ -43,10 +43,11 @@ component-definition:
             resources:
               kinds: 
               - Pod
-              namespaces:
-              - "foo"
+              # Commenting out the namespaces match so that we target all pods in a cluster instead of namespace-specific pods.
+              # namespaces:
+              # - "foo"
           validate:
-            message: "Every pod in namespace 'foo' should have 'foo=bar' label"
+            message: "Every pod in the cluster should have 'foo=bar' label"
             pattern:
               metadata:
                 labels:
