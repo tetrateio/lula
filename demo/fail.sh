@@ -1,16 +1,9 @@
 #!/bin/bash
 
-# create test namespaces
+# create the test namespaces
 kubectl apply -f ./demo/namespace.yaml
 
-# create failing test pod in each test namespace
-kubectl apply -f ./demo/pod.fail.yaml
-
-# wait for test pods to be ready
-for namespace in "foo" "test" "test1" "test2"
-do
-    kubectl wait --for=condition=Ready pod/demo-pod -n "${namespace}"
-done
-
-# lula execute to validate pass/fail status
+# lula execute to check for PeerAuthentication resources in our test namespaces.
+# validation will fail if they are not present, which in this case they aren't, so we expect validation to fail.
+# the output should show 4 resources failing.
 ./lula execute ./demo/oscal-component.yaml

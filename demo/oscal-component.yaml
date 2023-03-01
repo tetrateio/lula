@@ -38,17 +38,27 @@ component-definition:
           quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum 
           dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
         rules:
-        - name: ID-1
+        - name: istio-controlplane_AC-4(peer-auth-for-every-namespace)
           match:
-            resources:
-              kinds: 
-              - Pod
-              # Commenting out the namespaces match so that we target all pods in a cluster instead of namespace-specific pods.
-              # namespaces:
-              # - "foo"
+            any:
+            - resources:
+                kinds:
+                - "Namespace"
+                names:
+                - "foo"
+                - "test"
+                - "test1"
+                - "test2"
+          context:
+          - name: peerAuthCount
+            apiCall:
+              urlPath: "apis/security.istio.io/v1beta1/peerauthentications"
+              jmesPath: "items | length(@)"
           validate:
-            message: "Every pod in the cluster should have 'foo=bar' label"
-            pattern:
-              metadata:
-                labels:
-                  foo: bar
+            message: "The specified namespaces must have at least 1 PeerAuthentication resource."
+            deny:
+              conditions:
+                any:
+                - key: "{{peerAuthCount}}"
+                  operator: LessThan
+                  value: 1

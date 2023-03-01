@@ -3,44 +3,80 @@
 ## Prerequisites
 
 - A running kubernetes cluster
-  - using k3d for these tests
-
-  ```bash
-  k3d cluster create
-  ```
+- Istio deployed into the cluster so that we can create PeerAuthentication resources (using Big Bang for this)
 - A compiled `lula` binary in the root of the repository
 
 ## Configuration and Testing
 
-`oscal-component.yaml` in this directory has been modified to not target pods in a specific namespace, but rather all pods in the cluster.
+`oscal-component.yaml` defines that each specified namespace should have at least one PeerAuthentication resource present.
 
-`namespace.yaml` in this directory has been extended to define multiple namespaces:
+The test namespaces being used:
 
 - foo
 - test
 - test1
 - test2
 
-`pod.fail.yaml` and `pod.pass.yaml` in this directory have each been extended to define a pod in each test namespace.
+`peer-auth.yaml` has been added to define PeerAuthentication resources to be deployed to our test namespaces. When this file is applied to the cluster, it will create one PeerAuthentication resource in each test namespace.
 
-***note***: Kyverno will validate any resources that use Pod objects, such as Deployments, Daemonsets, ReplicaSets, Jobs, etc. This will show up in the output as Kyverno validates all of these resources in every namespace.
-
-To see the pods in each namespace fail validation, execute the `fail.sh` script:
-
-***note:*** the output will include pods in already existing namespaces, for example, pods in the `kube-system` namespace will fail because they don't have the label that Kyverno is checking for.
-
-The output should show 0 Passing resources
+To create the test namespaces and execute validation with lula:
 
 ```bash
 ./demo/fail.sh
 ```
 
-To see the pods in each namespace pass validation, execute the `pass.sh` script:
+The output shows 4 resources (namespaces in this case) failing validation as we expect:
 
-***note:*** this script only adds the proper label to pods in the test namespaces we created. Pods in other namespaces without the proper label will still fail validation.
+```bash
+namespace/foo created
+namespace/test created
+namespace/test1 created
+namespace/test2 created
 
-The output should show 4 Passing resources
+Applying 1 policy rule to 12 resources...
+
+policy 42c2ffdc-5f05-44df-a67f-eec8660aeffd -> resource /Namespace/test failed: 
+1. istio-controlplane_AC-4(peer-auth-for-every-namespace): The specified namespaces must have at least 1 PeerAuthentication resource. 
+
+policy 42c2ffdc-5f05-44df-a67f-eec8660aeffd -> resource /Namespace/test2 failed: 
+1. istio-controlplane_AC-4(peer-auth-for-every-namespace): The specified namespaces must have at least 1 PeerAuthentication resource. 
+
+policy 42c2ffdc-5f05-44df-a67f-eec8660aeffd -> resource /Namespace/foo failed: 
+1. istio-controlplane_AC-4(peer-auth-for-every-namespace): The specified namespaces must have at least 1 PeerAuthentication resource. 
+
+policy 42c2ffdc-5f05-44df-a67f-eec8660aeffd -> resource /Namespace/test1 failed: 
+1. istio-controlplane_AC-4(peer-auth-for-every-namespace): The specified namespaces must have at least 1 PeerAuthentication resource. 
+UUID: 42C2FFDC-5F05-44DF-A67F-EEC8660AEFFD
+        Resources Passing: 0
+        Resources Failing: 4
+        Status: Fail
+```
+
+Now let's create a PeerAuthentication resource for each test namespace and re-run validation with lula:
 
 ```bash
 ./demo/pass.sh
 ```
+
+The output shows 4 passing resources now:
+
+```bash
+peerauthentication.security.istio.io/lula-test created
+peerauthentication.security.istio.io/lula-test created
+peerauthentication.security.istio.io/lula-test created
+peerauthentication.security.istio.io/lula-test created
+
+Applying 1 policy rule to 12 resources...
+UUID: 42C2FFDC-5F05-44DF-A67F-EEC8660AEFFD
+        Resources Passing: 4
+        Resources Failing: 0
+        Status: Pass
+```
+
+Delete the test namespaces:
+
+```bash
+./demo/cleanup.sh
+```
+
+Rinse and repeat 😎
