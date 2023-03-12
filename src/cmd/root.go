@@ -4,7 +4,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/defenseunicorns/lula/src/cmd/execute"
+	"github.com/defenseunicorns/lula/src/cmd/validate"
 )
 
 var rootCmd = &cobra.Command{
@@ -16,8 +16,8 @@ var rootCmd = &cobra.Command{
 func Execute() {
 
 	commands := []*cobra.Command{
-		execute.ExecuteCommand(),
-		execute.GenerateCommand(),
+		validate.ValidateCommand(),
+		validate.GenerateCommand(),
 	}
 
 	rootCmd.AddCommand(commands...)
