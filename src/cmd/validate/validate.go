@@ -1,4 +1,4 @@
-package execute
+package validate
 
 import (
 	"context"
@@ -77,15 +77,15 @@ type ApplyCommandConfig struct {
 	warnExitCode    int
 }
 
-var executeHelp = `
-To execute on a cluster:
-	lula execute ./oscal-component.yaml
+var validateHelp = `
+To validate on a cluster:
+	lula validate ./oscal-component.yaml
 
-To execute on a resource:
-	lula execute ./oscal-component.yaml -r resource.yaml
+To validate on a resource:
+	lula validate ./oscal-component.yaml -r resource.yaml
 
-To execute without creation of any report files
-	lula execute ./oscal-component.yaml -d
+To validate without creation of any report files
+	lula validate ./oscal-component.yaml -d
 `
 
 var generateHelp = `
@@ -98,29 +98,30 @@ var cluster, dryRun bool
 
 var osExit = os.Exit
 
-var executeCmd = &cobra.Command{
-	Use:     "execute",
-	Short:   "execute",
-	Example: executeHelp,
+var ValidateCmd = &cobra.Command{
+	Use:     "validate",
+	Short:   "validate",
+	Example: validateHelp,
 	Run: func(cmd *cobra.Command, componentDefinitionPaths []string) {
 		// Conduct further error checking here (IE flags/arguments)
 		if len(componentDefinitionPaths) == 0 {
 			fmt.Println("Path to the local OSCAL file must be present")
+			fmt.Print(validateHelp)
 			os.Exit(1)
 		}
 
-		err := conductExecute(componentDefinitionPaths, resourcePaths, dryRun)
+		err := conductValidate(componentDefinitionPaths, resourcePaths, dryRun)
 		if err != nil {
 			log.Log.Error(err, "error string")
 		}
 	},
 }
 
-func ExecuteCommand() *cobra.Command {
-	executeCmd.Flags().StringArrayVarP(&resourcePaths, "resource", "r", []string{}, "Path to resource files")
-	executeCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Specifies whether to write reports to filesystem")
+func ValidateCommand() *cobra.Command {
+	ValidateCmd.Flags().StringArrayVarP(&resourcePaths, "resource", "r", []string{}, "Path to resource files")
+	ValidateCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Specifies whether to write reports to filesystem")
 
-	return executeCmd
+	return ValidateCmd
 }
 
 var outDirectory string
@@ -154,7 +155,7 @@ func check(e error) {
 	}
 }
 
-func conductExecute(componentDefinitionPaths []string, resourcePaths []string, dryRun bool) error {
+func conductValidate(componentDefinitionPaths []string, resourcePaths []string, dryRun bool) error {
 	applyCommandConfig := &ApplyCommandConfig{}
 	if len(resourcePaths) > 0 {
 		applyCommandConfig.Cluster = false
@@ -251,7 +252,7 @@ func conductGenerate(componentDefinitionPaths []string, outDirectory string) err
 }
 
 // Open files and attempt to unmarshall to oscal component definition structs
-func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefinitions []types.OscalComponentDefinition, err error) {
+func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefinitions []types.OscalComponentDefinitionModel, err error) {
 	for _, path := range filepaths {
 		_, err := os.Stat(path)
 		if os.IsNotExist(err) {
@@ -262,7 +263,7 @@ func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefin
 		rawDoc, err := os.ReadFile(path)
 		check(err)
 
-		var oscalComponentDefinition types.OscalComponentDefinition
+		var oscalComponentDefinition types.OscalComponentDefinitionModel
 
 		jsonDoc, err := yaml2.YAMLToJSON(rawDoc)
 		if err != nil {
@@ -281,7 +282,7 @@ func oscalComponentDefinitionsFromPaths(filepaths []string) (oscalComponentDefin
 // Parse the ingested documents (POC = 1) for applicable information
 // Knowns = this will be a yaml file
 // return a slice of Control objects
-func getImplementedReqs(componentDefinitions []types.OscalComponentDefinition) (implementedReqs []types.ImplementedRequirementsCustom, err error) {
+func getImplementedReqs(componentDefinitions []types.OscalComponentDefinitionModel) (implementedReqs []types.ImplementedRequirement, err error) {
 	for _, componentDefinition := range componentDefinitions {
 		for _, component := range componentDefinition.ComponentDefinition.Components {
 			for _, controlImplementation := range component.ControlImplementations {
@@ -295,7 +296,7 @@ func getImplementedReqs(componentDefinitions []types.OscalComponentDefinition) (
 // Turn a ruleset into a ClusterPolicy resource for ability to use Kyverno applyCommandHelper without modification
 // This needs to copy the rules into a Cluster Policy resource (yaml) and write to individual files
 // Kyverno will perform applying these and generating pass/fail results
-func generatePolicy(implementedRequirement types.ImplementedRequirementsCustom, outDir string) (policyPath string, err error) {
+func generatePolicy(implementedRequirement types.ImplementedRequirement, outDir string) (policyPath string, err error) {
 
 	if len(implementedRequirement.Rules) != 0 {
 		// fmt.Printf("%v", implementedRequirement.Rules[0].Validation.RawPattern)
