@@ -72,7 +72,7 @@ lula:
 1. Run the following command in the `lula` directory:
 
     ```bash
-    ./lula execute ./demo/oscal-component.yaml
+    ./lula validate ./demo/oscal-component.yaml
     ```
 
     The output in your terminal should inform you that there is at least one failing pod in the cluster:
@@ -97,7 +97,7 @@ lula:
 1. Run the following command in the `lula` directory:
 
     ```bash
-    ./lula execute ./demo/oscal-component.yaml
+    ./lula validate ./demo/oscal-component.yaml
     ```
 
     The output should now show the pod as passing the compliance requirement:

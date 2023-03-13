@@ -1,4 +1,4 @@
-package execute
+package validate
 
 import (
 	"context"
@@ -77,15 +77,15 @@ type ApplyCommandConfig struct {
 	warnExitCode    int
 }
 
-var executeHelp = `
-To execute on a cluster:
-	lula execute ./oscal-component.yaml
+var validateHelp = `
+To validate on a cluster:
+	lula validate ./oscal-component.yaml
 
-To execute on a resource:
-	lula execute ./oscal-component.yaml -r resource.yaml
+To validate on a resource:
+	lula validate ./oscal-component.yaml -r resource.yaml
 
-To execute without creation of any report files
-	lula execute ./oscal-component.yaml -d
+To validate without creation of any report files
+	lula validate ./oscal-component.yaml -d
 `
 
 var generateHelp = `
@@ -98,29 +98,30 @@ var cluster, dryRun bool
 
 var osExit = os.Exit
 
-var executeCmd = &cobra.Command{
-	Use:     "execute",
-	Short:   "execute",
-	Example: executeHelp,
+var ValidateCmd = &cobra.Command{
+	Use:     "validate",
+	Short:   "validate",
+	Example: validateHelp,
 	Run: func(cmd *cobra.Command, componentDefinitionPaths []string) {
 		// Conduct further error checking here (IE flags/arguments)
 		if len(componentDefinitionPaths) == 0 {
 			fmt.Println("Path to the local OSCAL file must be present")
+			fmt.Print(validateHelp)
 			os.Exit(1)
 		}
 
-		err := conductExecute(componentDefinitionPaths, resourcePaths, dryRun)
+		err := conductValidate(componentDefinitionPaths, resourcePaths, dryRun)
 		if err != nil {
 			log.Log.Error(err, "error string")
 		}
 	},
 }
 
-func ExecuteCommand() *cobra.Command {
-	executeCmd.Flags().StringArrayVarP(&resourcePaths, "resource", "r", []string{}, "Path to resource files")
-	executeCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Specifies whether to write reports to filesystem")
+func ValidateCommand() *cobra.Command {
+	ValidateCmd.Flags().StringArrayVarP(&resourcePaths, "resource", "r", []string{}, "Path to resource files")
+	ValidateCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Specifies whether to write reports to filesystem")
 
-	return executeCmd
+	return ValidateCmd
 }
 
 var outDirectory string
@@ -154,7 +155,7 @@ func check(e error) {
 	}
 }
 
-func conductExecute(componentDefinitionPaths []string, resourcePaths []string, dryRun bool) error {
+func conductValidate(componentDefinitionPaths []string, resourcePaths []string, dryRun bool) error {
 	applyCommandConfig := &ApplyCommandConfig{}
 	if len(resourcePaths) > 0 {
 		applyCommandConfig.Cluster = false
