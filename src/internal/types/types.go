@@ -19,10 +19,6 @@
 
 package types
 
-import (
-	Kyverno "github.com/kyverno/kyverno/api/kyverno/v1"
-)
-
 type OscalComponentDefinitionModel struct {
 	ComponentDefinition ComponentDefinition `json:"component-definition" yaml:"component-definition"`
 }
@@ -165,9 +161,26 @@ type ImplementedRequirement struct {
 	ResponsibleRoles []ResponsibleRole `json:"responsible-roles,omitempty" yaml:"responsible-roles,omitempty"`
 	Statements       []Statement       `json:"statements,omitempty" yaml:"statements,omitempty"`
 	Remarks          string            `json:"remarks,omitempty" yaml:"remarks,omitempty"`
-	// This is a custom field for Kyverno rules to generate compliance reports
-	Rules []Kyverno.Rule `json:"rules,omitempty" yaml:"rules,omitempty"`
+	// This is a custom field for OPA/REGO
+	Rules []RegoTargets `json:"rules,omitempty" yaml:"rules,omitempty"`
 }
+
+// Start Custom OPA prototype fields
+type RegoTargets struct {
+	Domain    string   `json:"domain" yaml:"domain"`
+	ApiGroup  string   `json:"apiGroup" yaml:"apiGroup"`
+	Kinds     []string `json:"kinds" yaml:"kinds"`
+	Namespace string   `json:"namespace" yaml:"namespace"`
+	Exclude   []string `json:"exclude" yaml:"exclude"`
+	Rego      string   `json:"rego" yaml:"rego"`
+}
+
+type Results struct {
+	Match    int
+	NonMatch int
+}
+
+// End Custom OPA prototype fields
 
 type ControlImplementation struct {
 	Props                   []Property               `json:"props,omitempty" yaml:"props,omitempty"`

@@ -38,16 +38,28 @@ component-definition:
           quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum 
           dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
         rules:
-        - name: ID-1
-          match:
-            resources:
-              kinds: 
-              - Pod
-              namespaces:
-              - "foo"
-          validate:
-            message: "Every pod in namespace 'foo' should have 'foo=bar' label"
-            pattern:
-              metadata:
-                labels:
-                  foo: bar
+        - domain: kubernetes
+          apiGroup: "v1"
+          kinds: ["Pod"]
+          namespace: ""
+          exclude:
+            - kube-system
+          rego: |
+            package match
+            default match = false
+            latest {
+              # The input keyword is a placeholder for the json value we wish to test our policy with
+              input.kind == "Pod"
+              output := split(input.spec.containers[_].image, ":")
+              # latest image tag
+              output[1] == "latest"
+            }
+            latest {
+              input.kind == "Pod"
+              output := split(input.spec.containers[_].image, ":")
+              # No image tag
+              count(output) == 1
+            }
+            match {
+                latest
+            }
