@@ -41,25 +41,20 @@ component-definition:
         - domain: kubernetes
           apiGroup: "v1"
           kinds: ["Pod"]
-          namespace: ""
-          exclude:
-            - kube-system
+          namespace: "test"
+          exclude: []
           rego: |
             package match
+
             default match = false
-            latest {
-              # The input keyword is a placeholder for the json value we wish to test our policy with
+
+            proxy {
               input.kind == "Pod"
-              output := split(input.spec.containers[_].image, ":")
-              # latest image tag
-              output[1] == "latest"
+              containerImages := input.spec.containers[_].image
+              contains(containerImages, "istio/proxy") == true
             }
-            latest {
-              input.kind == "Pod"
-              output := split(input.spec.containers[_].image, ":")
-              # No image tag
-              count(output) == 1
-            }
+
             match {
-                latest
+              proxy
             }
+
