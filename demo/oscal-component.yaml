@@ -38,7 +38,7 @@ component-definition:
           quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum 
           dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
         rules:
-        - domain: kubernetes
+        - domain: "kubernetes"
           apiGroup: "v1"
           kinds: ["Pod"]
           namespace: "test"
@@ -56,5 +56,52 @@ component-definition:
 
             match {
               proxy
+            }
+    - uuid: 6E423010-75D4-4131-B5F5-C3E901C7EBB2
+      source: # Link to generic security document
+      description:
+        Validate generic security requirements
+      implemented-requirements:
+      - uuid: CD9AD2D2-1797-40BB-87A6-13581E51DE3C
+        control-id: ID-2
+        description: >-
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, 
+          quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum 
+          dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+        rules:
+        - domain: "aws"
+          exclude:
+          - "cloud-enabled-y4a-rke2"
+          - "codepipeline-us-east-2-212734749716"
+          - "crossplane-hub-spoke-demo"
+          - "defense-unicorns-baffles-demo"
+          - "dependency-track-aws-tf-state"
+          - "elasticbeanstalk-us-east-2-950698127059"
+          - "hypergiant-aws-tf-state"
+          - "loki-bigbang-test"
+          - "my-bucket-73177f8"
+          - "my-tfstate-backend20230301194858988400000001"
+          - "public-beast-bang-things"
+          - "rapidfort-bigbang-tf-state"
+          - "rf-west-test"
+          - "sagemaker-us-east-1-950698127059"
+          - "tommy-bigbang-220230320104124552500000001"
+          - "tommy-bigbang20230320093153467300000001"
+          - "unclegedds-example-bucket"
+          - "zarf-examples"
+          rego: |
+            package match
+
+            default match = false
+
+            nopublicaccess {
+              input.PublicAccessBlockConfiguration.BlockPublicAcls == true
+              input.PublicAccessBlockConfiguration.BlockPublicPolicy == true
+              input.PublicAccessBlockConfiguration.IgnorePublicAcls == true
+              input.PublicAccessBlockConfiguration.RestrictPublicBuckets == true
+            }
+
+            match {
+              nopublicaccess
             }
 

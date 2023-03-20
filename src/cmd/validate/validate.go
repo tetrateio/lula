@@ -7,6 +7,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	types "github.com/defenseunicorns/lula/src/internal/types"
 	kube "github.com/defenseunicorns/lula/src/pkg/k8s"
 	"github.com/defenseunicorns/lula/src/pkg/opa"
@@ -114,11 +117,16 @@ func conductValidate(componentDefinitionPaths []string, resourcePaths []string, 
 
 		// for each target
 		for _, target := range implementedReq.Rules {
-			var resources []unstructured.Unstructured
+			var queryData []map[string]interface{}
 			// TODO - Per target - process domain and execute query accordingly
 			switch domain := target.Domain; domain {
 			case "kubernetes":
-				resources, err = queryKube(ctx, target)
+				queryData, err = queryKube(ctx, target)
+				if err != nil {
+					fmt.Println(err)
+				}
+			case "aws":
+				queryData, err = queryAWS(ctx, target)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -126,35 +134,8 @@ func conductValidate(componentDefinitionPaths []string, resourcePaths []string, 
 				fmt.Printf("No domain connector available for %s", domain)
 			}
 
-			// Maybe silly? marshall to json and unmarshall to []map[string]interface{}
-			jsonData, err := json.Marshal(resources)
-			if err != nil {
-				fmt.Println(err)
-			}
-			var data []map[string]interface{}
-			err = json.Unmarshal(jsonData, &data)
-
-			if err != nil {
-				fmt.Println(err)
-			}
-
-			var includedData []map[string]interface{}
-			for _, value := range data {
-				resourceNamespace := value["metadata"].(map[string]interface{})["namespace"]
-
-				exclude := false
-				for _, exns := range target.Exclude {
-					if exns == resourceNamespace {
-						exclude = true
-					}
-				}
-				if !exclude {
-					includedData = append(includedData, value)
-				}
-			}
-
 			// Call GetMatchedAssets()
-			results, err := opa.GetMatchedAssets(ctx, string(target.Rego), includedData)
+			results, err := opa.GetMatchedAssets(ctx, string(target.Rego), queryData)
 			if err != nil {
 				fmt.Println(err)
 			}
@@ -231,11 +212,11 @@ func getImplementedReqs(componentDefinitions []types.OscalComponentDefinitionMod
 	return
 }
 
-func queryKube(ctx context.Context, target types.RegoTargets) (resources []unstructured.Unstructured, err error) {
+func queryKube(ctx context.Context, target types.RegoTargets) (includedData []map[string]interface{}, err error) {
 
 	config := ctrl.GetConfigOrDie()
 	dynamic := dynamic.NewForConfigOrDie(config)
-
+	var resources []unstructured.Unstructured
 	for _, kind := range target.Kinds {
 		// check for group/version combo - there is only ever one `/` right?
 		var group, version string
@@ -259,5 +240,97 @@ func queryKube(ctx context.Context, target types.RegoTargets) (resources []unstr
 		}
 		resources = append(resources, items...)
 	}
-	return resources, nil
+	// Maybe silly? marshall to json and unmarshall to []map[string]interface{}
+	jsonData, err := json.Marshal(resources)
+	if err != nil {
+		fmt.Println(err)
+	}
+	var data []map[string]interface{}
+	err = json.Unmarshal(jsonData, &data)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	for _, value := range data {
+		resourceNamespace := value["metadata"].(map[string]interface{})["namespace"]
+
+		exclude := false
+		for _, exns := range target.Exclude {
+			if exns == resourceNamespace {
+				exclude = true
+			}
+		}
+		if !exclude {
+			includedData = append(includedData, value)
+		}
+	}
+
+	return includedData, nil
+}
+
+func queryAWS(ctx context.Context, target types.RegoTargets) (includedData []map[string]interface{}, err error) {
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithSharedConfigProfile("defense"),
+	)
+	if err != nil {
+		panic(fmt.Sprintf("failed loading config, %v", err))
+	}
+
+	// Create an Amazon S3 service client
+	client := s3.NewFromConfig(cfg)
+
+	output, err := client.ListBuckets(ctx, &s3.ListBucketsInput{})
+	if err != nil {
+		fmt.Println(err)
+	}
+	var queriedBuckets []s3.GetPublicAccessBlockOutput
+	for _, bucket := range output.Buckets {
+		fmt.Printf("Name=%s CreationDate=%d\n", aws.ToString(bucket.Name), bucket.CreationDate)
+
+		exclude := false
+		for _, excluded := range target.Exclude {
+			if excluded == *bucket.Name {
+				exclude = true
+			}
+		}
+		if !exclude {
+			access, err := client.GetPublicAccessBlock(ctx, &s3.GetPublicAccessBlockInput{
+				Bucket: aws.String(*bucket.Name),
+			})
+			if err != nil {
+				fmt.Println(err)
+			}
+			queriedBuckets = append(queriedBuckets, *access)
+		}
+
+	}
+
+	// access, err := client.GetPublicAccessBlock(ctx, &s3.GetPublicAccessBlockInput{
+	// 	Bucket: aws.String("loki-test-rob"),
+	// })
+	// // Not a great test - policy isn't required to block public access
+	// policy, err := client.GetBucketPolicyStatus(ctx, &s3.GetBucketPolicyStatusInput{
+	// 	Bucket: aws.String("loki-test-rob"),
+	// })
+	fmt.Println()
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println()
+	fmt.Println(queriedBuckets)
+
+	// Maybe silly? marshall to json and unmarshall to []map[string]interface{}
+	jsonData, err := json.Marshal(queriedBuckets)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	err = json.Unmarshal(jsonData, &includedData)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return includedData, nil
 }
