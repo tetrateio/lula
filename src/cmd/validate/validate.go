@@ -284,9 +284,9 @@ func queryAWS(ctx context.Context, target types.RegoTargets) (includedData []map
 	if err != nil {
 		fmt.Println(err)
 	}
+	fmt.Println("Processing Buckets...")
 	var queriedBuckets []s3.GetPublicAccessBlockOutput
 	for _, bucket := range output.Buckets {
-		fmt.Printf("Name=%s CreationDate=%d\n", aws.ToString(bucket.Name), bucket.CreationDate)
 
 		exclude := false
 		for _, excluded := range target.Exclude {
