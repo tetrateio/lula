@@ -308,10 +308,16 @@ func generatePolicy(implementedRequirement types.ImplementedRequirement, outDir 
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: policyName,
+				Labels: map[string]string{
+					"requirement": policyName,
+					"control-id":  implementedRequirement.ControlId,
+				},
 			},
 			Spec: v1.Spec{
 				Rules: implementedRequirement.Rules,
-			}}
+			},
+		}
+
 		// Requires the use of sigs.k8s.io/yaml for proper marshalling
 		yamlData, err := yaml1.Marshal(&policy)
 
