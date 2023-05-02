@@ -307,11 +307,6 @@ component-definition:
                 - istio-operator
                 - gatekeeper-system
                 - bigbang
-            - resources:
-                kinds:
-                - deployment
-                - statefulset
-                - daemonset
           validate:
             message: "Every pod should have istio-proxy"
             pattern:
