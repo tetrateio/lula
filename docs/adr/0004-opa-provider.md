@@ -8,11 +8,11 @@ Proposed
 
 ## Context
 
-[Open Policy Agent](https://www.openpolicyagent.org/docs/latest/) (OPA) provides a general-purpose policy engine for use across various domains, including Kubernetes, infrastructure, APIs, and more. One of OPA's standout features is its ability to accept arbitrary structured data as input, primarily in JSON format. This capability empowers us to create data sources that function as queries, generating structured data, and leverage a general-purpose language for performing validations.
+[Open Policy Agent](https://www.openpolicyagent.org/docs/latest/) (OPA) provides a general-purpose policy engine for use across various domains, including Kubernetes, infrastructure, APIs, and more. One of OPA's standout features is its ability to accept arbitrary structured data as input, primarily in JSON format. This capability, leveraged through the OPA SDK, empowers us to create data sources that function as queries, generating structured data, and leverage a general-purpose language for performing validations.
 
 ## Decision
 
-The decision is to integrate Open Policy Agent (OPA) as a validator within Lula. This integration will enable Lula to leverage OPA's capabilities in validating structured data, thereby enhancing its functionality in ensuring compliance and adherence to policies within environments.
+The decision is to integrate Open Policy Agent (OPA) as a validator through use of the OPA SDK within Lula. This integration will enable Lula to leverage OPA's capabilities in validating structured data, thereby enhancing its functionality in ensuring compliance and adherence to policies within environments.
 
 ## Consequences
 
