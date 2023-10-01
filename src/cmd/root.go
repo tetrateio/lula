@@ -17,7 +17,6 @@ func Execute() {
 
 	commands := []*cobra.Command{
 		validate.ValidateCommand(),
-		validate.GenerateCommand(),
 	}
 
 	rootCmd.AddCommand(commands...)

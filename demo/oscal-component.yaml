@@ -38,16 +38,36 @@ component-definition:
           quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum 
           dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
         rules:
-        - name: ID-1
-          match:
-            resources:
-              kinds: 
-              - Pod
-              namespaces:
-              - "foo"
-          validate:
-            message: "Every pod in namespace 'foo' should have 'foo=bar' label"
-            pattern:
-              metadata:
-                labels:
-                  foo: bar
+        - provider: cel
+          name: replicas-precondition
+          matchResources:
+            namespaceSelector:
+              matchExpressions:
+                - key: kubernetes.io/metadata.name
+                  operator: Exists
+              matchLabels:
+                kubernetes.io/metadata.name: validation-test-ns
+            objectSelector:
+              matchExpressions:
+                - key: hoo
+                  operator: DoesNotExist
+            resourceRules:
+              - Group: apps
+                Version: v1
+                Resource: deployments
+              - Group: ""
+                Version: v1
+                Resource: pods
+              - Group: apps
+                Version: v1
+                Resource: deployments/status
+              - Group: ""
+                Version: v1
+                Resource: pods/status
+            selectionPreconditions:
+              - expression: "object.metadata.name == 'nginx'"
+          validations:
+            - expression: "object.spec.containers[0].image == 'nginx' 
+                          || object.spec.template.spec.containers[0].image == 'nginx'"
+              messageExpression: "'resource: ' + object.metadata.name + ' does not have nginx image'"
+              key: "nginx-image"
