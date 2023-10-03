@@ -12,7 +12,7 @@ Proposed
 
 ## Decision
 
-The decision is to integrate Open Policy Agent (OPA) as a validator through use of the OPA SDK within Lula. This integration will enable Lula to leverage OPA's capabilities in validating structured data, thereby enhancing its functionality in ensuring compliance and adherence to policies within environments.
+The decision is to integrate Open Policy Agent (OPA) as a Provider through use of the OPA SDK within Lula. This integration will enable Lula to leverage OPA's capabilities in validating structured data, thereby enhancing its functionality in ensuring compliance and adherence to policies within environments.
 
 ## Consequences
 
