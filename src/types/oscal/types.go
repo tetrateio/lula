@@ -14,23 +14,10 @@
 	Source: https://github.com/defenseunicorns/go-oscal
 */
 
-// A couple custom additions were made to this auto-generated file:
-// The ComplianceReport struct was added and the Rules field was added to the ImplementedRequirement struct
-
-package types
-
-import (
-	Kyverno "github.com/kyverno/kyverno/api/kyverno/v1"
-)
+package oscalTypes
 
 type OscalComponentDefinitionModel struct {
 	ComponentDefinition ComponentDefinition `json:"component-definition" yaml:"component-definition"`
-}
-
-// This struct was manually added to this auto-generated file for generating compliance reports.
-type ComplianceReport struct {
-	SourceRequirements ImplementedRequirement `json:"source-requirements" yaml:"source-requirements"`
-	Result             string                 `json:"result" yaml:"result"`
 }
 
 type PortRange struct {
@@ -156,17 +143,16 @@ type ResponsibleRole struct {
 }
 
 type ImplementedRequirement struct {
-	Description      string            `json:"description" yaml:"description"`
-	Props            []Property        `json:"props,omitempty" yaml:"props,omitempty"`
-	Links            []Link            `json:"links,omitempty" yaml:"links,omitempty"`
-	SetParameters    []SetParameter    `json:"set-parameters,omitempty" yaml:"set-parameters,omitempty"`
-	UUID             string            `json:"uuid" yaml:"uuid"`
-	ControlId        string            `json:"control-id" yaml:"control-id"`
-	ResponsibleRoles []ResponsibleRole `json:"responsible-roles,omitempty" yaml:"responsible-roles,omitempty"`
-	Statements       []Statement       `json:"statements,omitempty" yaml:"statements,omitempty"`
-	Remarks          string            `json:"remarks,omitempty" yaml:"remarks,omitempty"`
-	// This is a custom field for Kyverno rules to generate compliance reports
-	Rules []Kyverno.Rule `json:"rules,omitempty" yaml:"rules,omitempty"`
+	Description      string                   `json:"description" yaml:"description"`
+	Props            []Property               `json:"props,omitempty" yaml:"props,omitempty"`
+	Links            []Link                   `json:"links,omitempty" yaml:"links,omitempty"`
+	SetParameters    []SetParameter           `json:"set-parameters,omitempty" yaml:"set-parameters,omitempty"`
+	UUID             string                   `json:"uuid" yaml:"uuid"`
+	ControlId        string                   `json:"control-id" yaml:"control-id"`
+	ResponsibleRoles []ResponsibleRole        `json:"responsible-roles,omitempty" yaml:"responsible-roles,omitempty"`
+	Statements       []Statement              `json:"statements,omitempty" yaml:"statements,omitempty"`
+	Remarks          string                   `json:"remarks,omitempty" yaml:"remarks,omitempty"`
+	Rules            []map[string]interface{} `json:"rules,omitempty" yaml:"rules,omitempty"`
 }
 
 type ControlImplementation struct {
