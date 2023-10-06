@@ -16,7 +16,6 @@ import (
 var validateHelp = `
 To validate on a cluster:
 	lula validate ./oscal-component.yaml
-
 `
 
 var cluster bool
@@ -34,10 +33,13 @@ var ValidateCmd = &cobra.Command{
 
 		result, err := ValidateOnPaths(componentDefinitionPaths)
 		if err != nil {
-			return fmt.Errorf("validation error: %w\n", err)
+			return fmt.Errorf("Validation error: %w\n", err)
 		}
 
 		report, err := GenerateReportFromResults(result)
+		if err != nil {
+			return fmt.Errorf("Generate error: %w\n", err)
+		}
 
 		err = WriteReport(report)
 		if err != nil {
@@ -127,7 +129,7 @@ func ValidateOnTarget(target map[string]interface{}) (types.Result, error) {
 	// 	continue
 	// }
 
-	// mock result
+	// mock result until until initial provider is created
 	result.UUID = "12345"
 	result.ControlId = "cm4.1"
 	result.Failing = 0

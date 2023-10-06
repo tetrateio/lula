@@ -31,7 +31,7 @@ func NewOscalComponentDefinition(data []byte) (oscalTypes.OscalComponentDefiniti
 
 // Collect all implemented-requirements from the component-definition
 func GetImplementedRequirements(componentDefinition oscalTypes.ComponentDefinition) (map[string][]oscalTypes.ImplementedRequirement, error) {
-	var controlImplementations map[string][]oscalTypes.ImplementedRequirement
+	controlImplementations := make(map[string][]oscalTypes.ImplementedRequirement, 0)
 
 	for _, component := range componentDefinition.Components {
 		for _, controlImplementation := range component.ControlImplementations {
