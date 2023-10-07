@@ -10,7 +10,7 @@ import (
 
 // NewOscalComponentDefintion consumes a byte arrray and returns a new single OscalComponentDefinitionModel object
 // Standard use is to read a file from the filesystem and pass the []byte to this function
-func NewOscalComponentDefinition(data []byte) (oscalTypes.OscalComponentDefinitionModel, error) {
+func NewOscalComponentDefinition(data []byte) (oscalTypes.ComponentDefinition, error) {
 	var oscalComponentDefinition oscalTypes.OscalComponentDefinitionModel
 
 	// TODO: see if we unmarshall yaml data more effectively
@@ -26,18 +26,33 @@ func NewOscalComponentDefinition(data []byte) (oscalTypes.OscalComponentDefiniti
 		fmt.Printf("Error unmarshalling JSON: %s\n", err.Error())
 	}
 
-	return oscalComponentDefinition, nil
+	return oscalComponentDefinition.ComponentDefinition, nil
 }
 
-// Collect all implemented-requirements from the component-definition
-func GetImplementedRequirements(componentDefinition oscalTypes.ComponentDefinition) (map[string][]oscalTypes.ImplementedRequirement, error) {
-	controlImplementations := make(map[string][]oscalTypes.ImplementedRequirement, 0)
+// func GetComponents(componentDefinition oscalTypes.OscalComponentDefinition) ([]oscalTypes.DefinedComponent, error) {
+// 	components 	:= make([]oscalTypes.DefinedComponent, 0)
+// 	componentDefinitions := componentDefinition.DefinedComponents
 
-	for _, component := range componentDefinition.Components {
-		for _, controlImplementation := range component.ControlImplementations {
-			controlImplementations[controlImplementation.UUID] = controlImplementation.ImplementedRequirements
-		}
+// func GetControlImplementations(componentDefinition oscalTypes.ComponentDefinition) ([]oscalTypes.ControlImplementation, error) {
 
-	}
-	return controlImplementations, nil
-}
+// 	controlImplementations := make([]oscalTypes.ControlImplementation, 0)
+
+// 	for _, controlImplementation := range componentDefinition.ControlImplementations {
+// 		controlImplementations = append(controlImplementations, controlImplementation)
+// 	}
+
+// 	return controlImplementations, nil
+// }
+
+// // Collect all implemented-requirements from the component-definition
+// func GetImplementedRequirements(componentDefinition oscalTypes.ComponentDefinition) (map[string][]oscalTypes.ImplementedRequirement, error) {
+// 	controlImplementations := make(map[string][]oscalTypes.ImplementedRequirement, 0)
+
+// 	for _, component := range componentDefinition.Components {
+// 		for _, controlImplementation := range component.ControlImplementations {
+// 			controlImplementations[controlImplementation.UUID] = controlImplementation.ImplementedRequirements
+// 		}
+
+// 	}
+// 	return controlImplementations, nil
+// }

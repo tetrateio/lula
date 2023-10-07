@@ -31,16 +31,23 @@ var ValidateCmd = &cobra.Command{
 			return errors.New("Path to OSCAL component definition(s) required")
 		}
 
-		result, err := ValidateOnPaths(componentDefinitionPaths)
+		results := types.ResultObject{
+			FilePaths: componentDefinitionPaths,
+		}
+
+		// Primary expected path for validation of OSCAL documents
+		err := ValidateOnPaths(&results)
 		if err != nil {
 			return fmt.Errorf("Validation error: %w\n", err)
 		}
 
+		// Convert Results to expected report format
 		report, err := GenerateReportFromResults(result)
 		if err != nil {
 			return fmt.Errorf("Generate error: %w\n", err)
 		}
 
+		// Write report(s) to file
 		err = WriteReport(report)
 		if err != nil {
 			return fmt.Errorf("Write error: %w\n", err)
@@ -55,12 +62,35 @@ func ValidateCommand() *cobra.Command {
 	return ValidateCmd
 }
 
+/*
+	To tell the validation story:
+		Lula is currently evaluating controls identified in the Implemented-Requirements of a component-definition.
+		We would then be looking to retain information that may be required for relation of component-definition (input) to an assessment-results (output).
+		In order to get there - we have to traverse and possibly track UUIDs at a minimum:
+
+		Lula accepts 1 -> N paths to OSCAL component-definition files
+		For each component definition:
+			There are 1 -> N Components
+			For each component:
+				There are 1 -> N control-Implementations
+				For each control-implementation:
+					There are 1-> N implemented-requirements
+					For each implemented-requirement:
+						There are 1 -> N validations
+							This allows for breaking complex query and policy into smaller  chunks
+						Validations are evaluated individually with passing/failing resources
+					Pass/Fail results from all validations is evaluated for a pass/fail status in the report
+
+	As such, building a ReportObject to collect and retain the relational information could be preferred
+
+*/
+
 // ValidateOnPath takes 1 -> N paths to OSCAL component-definition files
 // It will then read those files to perform validation and return an ResultObject
-func ValidateOnPaths(componentDefinitionPaths []string) (map[string]map[string][]types.Result, error) {
+func ValidateOnPaths(obj *types.ReportObject) error {
 	resultMap := make(map[string]map[string][]types.Result, 0)
 	// for each path
-	for _, path := range componentDefinitionPaths {
+	for _, path := range obj.FilePaths {
 		_, err := os.Stat(path)
 		if os.IsNotExist(err) {
 			fmt.Printf("Path: %v does not exist - unable to digest document\n", path)
@@ -69,23 +99,22 @@ func ValidateOnPaths(componentDefinitionPaths []string) (map[string]map[string][
 
 		data, err := os.ReadFile(path)
 		if err != nil {
-			return resultMap, err
+			return err
 		}
 
 		compDef, err := oscal.NewOscalComponentDefinition(data)
-		results, err := ValidateOnCompDef(compDef.ComponentDefinition)
+		err = ValidateOnCompDef(obj, compDef)
 
-		resultMap[compDef.ComponentDefinition.UUID] = results
+		obj.UUID = compDef.UUID
 	}
 
-	return resultMap, nil
+	return nil
 
 }
 
 // ValidateOnCompDef takes a single ComponentDefinition object
-// It will perform a validation and return a map[string][]Result
-// This keep track of the control-implementation UUID for which each component may have many
-func ValidateOnCompDef(compDef oscalTypes.ComponentDefinition) (map[string][]types.Result, error) {
+// It will perform a validation and add data to a referenced report object
+func ValidateOnCompDef(obj *types.ReportObject, compDef oscalTypes.ComponentDefinition) error {
 	results := make(map[string][]types.Result, 0)
 
 	controlImplementations, err := oscal.GetImplementedRequirements(compDef)
@@ -110,6 +139,22 @@ func ValidateOnCompDef(compDef oscalTypes.ComponentDefinition) (map[string][]typ
 
 	}
 	return results, nil
+}
+
+func ValidateOnCompDef(obj *types.ReportObject, compDef oscalTypes.ComponentDefinition) error {
+
+	// Loops all the way down
+	for _, component := range compDef.Components {
+		for _, controlImplementation := range component.ControlImplementations {
+			for _, implementedRequirement := range controlImplementation.ImplementedRequirements {
+				for _, target := range implementedRequirement.Rules {
+
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // ValidateOnTarget takes a map[string]interface{}
