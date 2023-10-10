@@ -23,6 +23,7 @@ var cluster bool
 var ValidateCmd = &cobra.Command{
 	Use:     "validate",
 	Short:   "validate",
+	Long:    "Lula Validation for compliance with established policy",
 	Example: validateHelp,
 	RunE: func(cmd *cobra.Command, componentDefinitionPaths []string) error {
 		// Conduct further error checking here (IE flags/arguments)

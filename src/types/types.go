@@ -10,6 +10,7 @@ type ComplianceReport struct {
 
 // The ReportObject keeps track of all pertinent information as it relates to relational data IE UUID's
 // This will hopefully make transformation to the reporting model easier
+// or be replaced by an OSCAL native type
 type ReportObject struct {
 	FilePaths  []string    `json:"file-paths" yaml:"file-paths"`
 	UUID       string      `json:"uuid" yaml:"uuid"`
