@@ -17,7 +17,7 @@ func NewOscalComponentDefinition(data []byte) (oscalTypes.ComponentDefinition, e
 	jsonDoc, err := yaml2.YAMLToJSON(data)
 	if err != nil {
 		fmt.Printf("Error converting YAML to JSON: %s\n", err.Error())
-		return oscalComponentDefinition, err
+		return oscalComponentDefinition.ComponentDefinition, err
 	}
 
 	err = json.Unmarshal(jsonDoc, &oscalComponentDefinition)
@@ -28,31 +28,3 @@ func NewOscalComponentDefinition(data []byte) (oscalTypes.ComponentDefinition, e
 
 	return oscalComponentDefinition.ComponentDefinition, nil
 }
-
-// func GetComponents(componentDefinition oscalTypes.OscalComponentDefinition) ([]oscalTypes.DefinedComponent, error) {
-// 	components 	:= make([]oscalTypes.DefinedComponent, 0)
-// 	componentDefinitions := componentDefinition.DefinedComponents
-
-// func GetControlImplementations(componentDefinition oscalTypes.ComponentDefinition) ([]oscalTypes.ControlImplementation, error) {
-
-// 	controlImplementations := make([]oscalTypes.ControlImplementation, 0)
-
-// 	for _, controlImplementation := range componentDefinition.ControlImplementations {
-// 		controlImplementations = append(controlImplementations, controlImplementation)
-// 	}
-
-// 	return controlImplementations, nil
-// }
-
-// // Collect all implemented-requirements from the component-definition
-// func GetImplementedRequirements(componentDefinition oscalTypes.ComponentDefinition) (map[string][]oscalTypes.ImplementedRequirement, error) {
-// 	controlImplementations := make(map[string][]oscalTypes.ImplementedRequirement, 0)
-
-// 	for _, component := range componentDefinition.Components {
-// 		for _, controlImplementation := range component.ControlImplementations {
-// 			controlImplementations[controlImplementation.UUID] = controlImplementation.ImplementedRequirements
-// 		}
-
-// 	}
-// 	return controlImplementations, nil
-// }

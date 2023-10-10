@@ -8,7 +8,7 @@ import (
 
 	"github.com/defenseunicorns/lula/src/pkg/oscal"
 	"github.com/defenseunicorns/lula/src/types"
-	"github.com/defenseunicorns/lula/src/types/oscal"
+	oscalTypes "github.com/defenseunicorns/lula/src/types/oscal"
 	"github.com/spf13/cobra"
 	yaml1 "sigs.k8s.io/yaml"
 )
@@ -31,7 +31,7 @@ var ValidateCmd = &cobra.Command{
 			return errors.New("Path to OSCAL component definition(s) required")
 		}
 
-		results := types.ResultObject{
+		results := types.ReportObject{
 			FilePaths: componentDefinitionPaths,
 		}
 
@@ -42,7 +42,7 @@ var ValidateCmd = &cobra.Command{
 		}
 
 		// Convert Results to expected report format
-		report, err := GenerateReportFromResults(result)
+		report, err := GenerateReportFromResults(&results)
 		if err != nil {
 			return fmt.Errorf("Generate error: %w\n", err)
 		}
@@ -88,7 +88,6 @@ func ValidateCommand() *cobra.Command {
 // ValidateOnPath takes 1 -> N paths to OSCAL component-definition files
 // It will then read those files to perform validation and return an ResultObject
 func ValidateOnPaths(obj *types.ReportObject) error {
-	resultMap := make(map[string]map[string][]types.Result, 0)
 	// for each path
 	for _, path := range obj.FilePaths {
 		_, err := os.Stat(path)
@@ -114,44 +113,54 @@ func ValidateOnPaths(obj *types.ReportObject) error {
 
 // ValidateOnCompDef takes a single ComponentDefinition object
 // It will perform a validation and add data to a referenced report object
-func ValidateOnCompDef(obj *types.ReportObject, compDef oscalTypes.ComponentDefinition) error {
-	results := make(map[string][]types.Result, 0)
-
-	controlImplementations, err := oscal.GetImplementedRequirements(compDef)
-	if err != nil {
-		return results, nil
-	}
-
-	for _, implementedReqs := range controlImplementations {
-		for _, implementedReq := range implementedReqs {
-			for _, target := range implementedReq.Rules {
-				result, err := ValidateOnTarget(target)
-
-				if err != nil {
-					return results, nil
-				}
-
-				results[implementedReq.UUID] = append(results[implementedReq.UUID], result)
-			}
-		}
-
-		// for each validation - this is what will change when we become OSCAL schema compliant
-
-	}
-	return results, nil
-}
 
 func ValidateOnCompDef(obj *types.ReportObject, compDef oscalTypes.ComponentDefinition) error {
 
 	// Loops all the way down
+	// Keeps track of UUID's for later reporting and relation
 	for _, component := range compDef.Components {
-		for _, controlImplementation := range component.ControlImplementations {
-			for _, implementedRequirement := range controlImplementation.ImplementedRequirements {
-				for _, target := range implementedRequirement.Rules {
-
-				}
-			}
+		comp := types.Component{
+			UUID: component.UUID,
 		}
+		for _, controlImplementation := range component.ControlImplementations {
+			control := types.ControlImplementation{
+				UUID: controlImplementation.UUID,
+			}
+			for _, implementedRequirement := range controlImplementation.ImplementedRequirements {
+				impReq := types.ImplementedReq{
+					UUID:        implementedRequirement.UUID,
+					ControlId:   implementedRequirement.ControlId,
+					Description: implementedRequirement.Description,
+				}
+				var pass, fail int
+				for _, target := range implementedRequirement.Rules {
+					result, err := ValidateOnTarget(target)
+
+					if err != nil {
+						return err
+					}
+					pass += result.Passing
+					fail += result.Failing
+					impReq.Results = append(impReq.Results, result)
+				}
+
+				if pass > 0 && fail <= 0 {
+					impReq.Status = "Pass"
+				} else if pass == 0 && fail == 0 {
+					impReq.Status = "Not Evaluated"
+				} else {
+					impReq.Status = "Fail"
+				}
+
+				// TODO: convert to logging
+				fmt.Printf("UUID: %v\n\tResources Passing: %v\n\tResources Failing: %v\n\tStatus: %v\n", impReq.UUID, pass, fail, impReq.Status)
+
+				control.ImplementedReqs = append(control.ImplementedReqs, impReq)
+			}
+			comp.ControlImplementations = append(comp.ControlImplementations, control)
+		}
+		obj.Components = append(obj.Components, comp)
+
 	}
 
 	return nil
@@ -179,39 +188,29 @@ func ValidateOnTarget(target map[string]interface{}) (types.Result, error) {
 	result.ControlId = "cm4.1"
 	result.Failing = 0
 	result.Passing = 1
-	result.Description = "This control ensures results can be processed"
 
 	return result, nil
 
 }
 
-// TODO: this needs to evolve quite a bit
-func GenerateReportFromResults(results map[string]map[string][]types.Result) ([]types.ComplianceReport, error) {
+// TODO: this needs to evolve quite a bit - should transform a ReportObject into an OSCAL Model
+// Specifically re-traversing the layers
+func GenerateReportFromResults(results *types.ReportObject) ([]types.ComplianceReport, error) {
 	var complianceReports []types.ComplianceReport
-	// TODO: need to grab identifying information about the component-definition and component
 	// component-definition -> component -> control-implementation -> implemented-requirements -> targets
-	for _, controlImplementation := range results {
 
-		for id, results := range controlImplementation {
-			currentReport := types.ComplianceReport{
-				UUID: id,
-			}
-			var pass, fail int
-			for _, result := range results {
-				currentReport.ControlId = result.ControlId
-				pass += result.Passing
-				fail += result.Failing
+	for _, component := range results.Components {
+		for _, control := range component.ControlImplementations {
+			for _, impReq := range control.ImplementedReqs {
+				currentReport := types.ComplianceReport{
+					UUID:        impReq.UUID,
+					ControlId:   impReq.ControlId,
+					Description: impReq.Description,
+					Result:      impReq.Status,
+				}
 
+				complianceReports = append(complianceReports, currentReport)
 			}
-			var resultString string
-			if pass > 0 && fail <= 0 {
-				resultString = "Pass"
-			} else {
-				resultString = "Fail"
-			}
-			currentReport.Result = resultString
-			complianceReports = append(complianceReports, currentReport)
-			fmt.Printf("UUID: %v\n\tResources Passing: %v\n\tResources Failing: %v\n\tStatus: %v\n", currentReport.UUID, pass, fail, resultString)
 		}
 	}
 

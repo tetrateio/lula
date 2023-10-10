@@ -27,8 +27,11 @@ type ControlImplementation struct {
 }
 
 type ImplementedReq struct {
-	UUID    string   `json:"uuid" yaml:"uuid"`
-	Results []Result `json:"results" yaml:"results"`
+	UUID        string   `json:"uuid" yaml:"uuid"`
+	ControlId   string   `json:"control-id" yaml:"control-id"`
+	Status      string   `json:"status" yaml:"status"`
+	Description string   `json:"description" yaml:"description"`
+	Results     []Result `json:"results" yaml:"results"`
 }
 
 // native type for conversion to targeted report format
