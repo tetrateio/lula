@@ -44,7 +44,7 @@ jobs:
           CODEQL_EXTRACTOR_GO_BUILD_TRACING: on
         with:
           languages: ${{ matrix.language }}
-          config-file: ./.github/codeql.yaml
+          # config-file: ./.github/codeql.yaml #Uncomment once config file is needed.
 
       - name: Perform CodeQL Analysis
         id: scan
