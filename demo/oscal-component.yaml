@@ -38,16 +38,38 @@ component-definition:
           quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum 
           dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
         rules:
-        - name: ID-1
-          match:
-            resources:
-              kinds: 
-              - Pod
-              namespaces:
-              - "foo"
-          validate:
-            message: "Every pod in namespace 'foo' should have 'foo=bar' label"
-            pattern:
-              metadata:
-                labels:
-                  foo: bar
+        - provider: "opa"
+          domain: "kubernetes"
+          payload:
+            resourceRules:      # Mandatory, resource selection criteria, at least one resource rule is required
+            - Group:            # empty or "" for core group
+              Version: v1       # Version of resource
+              Resource: pods    # Resource type
+              Namespaces: [default]  # Namespaces to validate the above resources in. Empty or "" for all namespaces or non-namespaced resources
+            # exclude: []
+            # rego: |
+            #   package match
+
+            #   default match = false
+
+            #   proxy {
+            #     input.kind == "Pod"
+            #     containerImages := input.spec.containers[_].image
+            #     contains(containerImages, "istio/proxy") == true
+            #   }
+
+            #   match {
+            #     proxy
+            #   }
+            rego: |
+              package match
+
+              foolabel {
+                input.kind == "Pod"
+                podLabels := input.metadata.labels.foo
+                contains(podLabels, "bar") == true
+              }
+
+              match {
+                foolabel
+              }
