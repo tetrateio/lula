@@ -1,0 +1,6 @@
+paths-ignore:
+  - bin/**
+
+query-filters:
+  - exclude:
+      id: go/path-injection
