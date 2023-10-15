@@ -1,4 +1,4 @@
-name: Go Build and Test
+name: E2E Testing
 
 on:
   push:
