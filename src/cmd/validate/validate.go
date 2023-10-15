@@ -118,6 +118,8 @@ func ValidateOnPaths(obj *types.ReportObject) error {
 // It will perform a validation and add data to a referenced report object
 
 func ValidateOnCompDef(obj *types.ReportObject, compDef oscalTypes.ComponentDefinition) error {
+
+	// TODO: Is there a better location for context?
 	ctx := context.Background()
 	// Loops all the way down
 	// Keeps track of UUID's for later reporting and relation

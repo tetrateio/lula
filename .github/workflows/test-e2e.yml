@@ -1,0 +1,29 @@
+name: Go Build and Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: go.mod
+        check-latest: true
+        cache: true
+        cache-dependency-path: '**/go.sum'
+
+    - name: Display Go version
+      run: go version
+      
+    - name: e2e Tests
+      run: | 
+        make test
