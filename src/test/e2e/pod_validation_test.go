@@ -16,7 +16,7 @@ import (
 )
 
 func TestPodLabelValidation(t *testing.T) {
-	featureTrueValidation := features.New("Check Pod Validation - success").
+	featureTrueValidation := features.New("Check Pod Validation - Success").
 		Setup(func(ctx context.Context, t *testing.T, config *envconf.Config) context.Context {
 			pod, err := util.GetPod("./scenarios/pod-label/pod.pass.yaml")
 			if err != nil {
@@ -62,7 +62,7 @@ func TestPodLabelValidation(t *testing.T) {
 			return ctx
 		}).Feature()
 
-	featureFalseValidation := features.New("Check Pod Validation - failure").
+	featureFalseValidation := features.New("Check Pod Validation - Failure").
 		Setup(func(ctx context.Context, t *testing.T, config *envconf.Config) context.Context {
 			pod, err := util.GetPod("./scenarios/pod-label/pod.fail.yaml")
 			if err != nil {
@@ -91,13 +91,10 @@ func TestPodLabelValidation(t *testing.T) {
 			// TODO: maybe this brings to light modifying the
 			result := results.Components[0].ControlImplementations[0].ImplementedReqs[0].Results[0]
 
-			if result.Failing != 0 {
-				t.Fatal("Failing resources should be 0, but got :", result.Failing)
+			if result.Failing <= 0 {
+				t.Fatal("Failing resources should be 1, but got :", result.Failing)
 			}
 
-			if result.Passing <= 0 {
-				t.Fatal("Passing resources should be 1, but got :", result.Failing)
-			}
 			return ctx
 		}).
 		Teardown(func(ctx context.Context, t *testing.T, config *envconf.Config) context.Context {
