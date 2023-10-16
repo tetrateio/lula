@@ -47,7 +47,7 @@ component-definition:
               Resource: pods    # Resource type
               Namespaces: [validation-test]  # Namespaces to validate the above resources in. Empty or "" for all namespaces or non-namespaced resources
             rego: |
-              package match
+              package validate
 
               foolabel {
                 input.kind == "Pod"
@@ -55,6 +55,6 @@ component-definition:
                 podLabel == "bar"
               }
 
-              match {
+              validate {
                 foolabel
               }
