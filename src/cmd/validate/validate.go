@@ -116,7 +116,6 @@ func ValidateOnPaths(obj *types.ReportObject) error {
 
 // ValidateOnCompDef takes a single ComponentDefinition object
 // It will perform a validation and add data to a referenced report object
-
 func ValidateOnCompDef(obj *types.ReportObject, compDef oscalTypes.ComponentDefinition) error {
 
 	// TODO: Is there a better location for context?
@@ -177,7 +176,7 @@ func ValidateOnTarget(ctx context.Context, target map[string]interface{}) (types
 	// simple conditional until more providers are introduced
 	if provider, ok := target["provider"].(string); ok && provider == "opa" {
 		fmt.Println("OPA provider validating...")
-		results, err := opa.Validate(ctx, target["payload"].(map[string]interface{}))
+		results, err := opa.Validate(ctx, target["domain"].(string), target["payload"].(map[string]interface{}))
 		if err != nil {
 			return types.Result{}, err
 		}

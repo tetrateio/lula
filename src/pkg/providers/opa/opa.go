@@ -10,12 +10,13 @@ import (
 	"github.com/defenseunicorns/lula/src/pkg/common/kubernetes"
 	"github.com/defenseunicorns/lula/src/types"
 	"github.com/mitchellh/mapstructure"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 )
 
-func Validate(ctx context.Context, data map[string]interface{}) (types.Result, error) {
+func Validate(ctx context.Context, domain string, data map[string]interface{}) (types.Result, error) {
 
 	// Convert map[string]interface to a RegoTarget
 	var payload types.Payload
@@ -24,10 +25,16 @@ func Validate(ctx context.Context, data map[string]interface{}) (types.Result, e
 		return types.Result{}, err
 	}
 
-	// query kubernetes for resource data
-	resources, err := kube.QueryCluster(ctx, payload)
-	if err != nil {
-		return types.Result{}, err
+	// query kubernetes for resource data if domain == "kubernetes"
+	// TODO: evaluate processes for manifests/helm charts
+	var resources []unstructured.Unstructured
+	if domain == "kubernetes" {
+		resources, err = kube.QueryCluster(ctx, payload)
+		if err != nil {
+			return types.Result{}, err
+		}
+	} else {
+		return types.Result{}, fmt.Errorf("domain %s is not supported", domain)
 	}
 
 	// Convert to []map[string]interface{} for rego validation
@@ -46,6 +53,7 @@ func Validate(ctx context.Context, data map[string]interface{}) (types.Result, e
 	return results, nil
 }
 
+// GetValidatedAssets performs the validation of the dataset against the given rego policy
 func GetValidatedAssets(ctx context.Context, regoPolicy string, dataset []map[string]interface{}) (types.Result, error) {
 	var wg sync.WaitGroup
 	var matchResult types.Result
