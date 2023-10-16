@@ -60,7 +60,7 @@ $(BINDIR)/$(BINNAME): $(SRC)
 
 .PHONY: test
 test: 
-	cd src/test/e2e && go test $(GOFLAGS) -run $(TESTS) $(PKG) $(TESTFLAGS)
+	cd src/test/e2e && go clean -testcache && go test $(GOFLAGS) -run $(TESTS) $(PKG) $(TESTFLAGS)
 
 .PHONY: install
 install: ## Install binary to $INSTALL_PATH.

@@ -37,7 +37,7 @@ func Validate(ctx context.Context, data map[string]interface{}) (types.Result, e
 	}
 
 	// TODO: Add logging optionality for understanding what resources are actually being validated
-	results, err := GetMatchedAssets(ctx, payload.Rego, mapData)
+	results, err := GetValidatedAssets(ctx, payload.Rego, mapData)
 	if err != nil {
 		return types.Result{}, err
 	}
@@ -46,12 +46,12 @@ func Validate(ctx context.Context, data map[string]interface{}) (types.Result, e
 	return results, nil
 }
 
-func GetMatchedAssets(ctx context.Context, regoPolicy string, dataset []map[string]interface{}) (types.Result, error) {
+func GetValidatedAssets(ctx context.Context, regoPolicy string, dataset []map[string]interface{}) (types.Result, error) {
 	var wg sync.WaitGroup
 	var matchResult types.Result
 
 	compiler, err := ast.CompileModules(map[string]string{
-		"match.rego": regoPolicy,
+		"validate.rego": regoPolicy,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -64,7 +64,7 @@ func GetMatchedAssets(ctx context.Context, regoPolicy string, dataset []map[stri
 			defer wg.Done()
 
 			regoCalc := rego.New(
-				rego.Query("data.match"),
+				rego.Query("data.validate"),
 				rego.Compiler(compiler),
 				rego.Input(asset),
 			)
@@ -87,7 +87,7 @@ func GetMatchedAssets(ctx context.Context, regoPolicy string, dataset []map[stri
 						wg.Done()
 					}
 					// TODO: add logging optionality here for developer experience
-					if matched, ok := expressionMap["match"]; ok && matched.(bool) {
+					if matched, ok := expressionMap["validate"]; ok && matched.(bool) {
 						// fmt.Printf("Asset %s matched policy: %s\n\n", asset, expression)
 						matchResult.Passing += 1
 					} else {

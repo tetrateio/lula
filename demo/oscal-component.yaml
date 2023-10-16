@@ -46,23 +46,8 @@ component-definition:
               Version: v1       # Version of resource
               Resource: pods    # Resource type
               Namespaces: [validation-test]  # Namespaces to validate the above resources in. Empty or "" for all namespaces or non-namespaced resources
-            # exclude: []
-            # rego: |
-            #   package match
-
-            #   default match = false
-
-            #   proxy {
-            #     input.kind == "Pod"
-            #     containerImages := input.spec.containers[_].image
-            #     contains(containerImages, "istio/proxy") == true
-            #   }
-
-            #   match {
-            #     proxy
-            #   }
             rego: |
-              package match
+              package validate
 
               foolabel {
                 input.kind == "Pod"
@@ -70,6 +55,6 @@ component-definition:
                 podLabel == "bar"
               }
 
-              match {
+              validate {
                 foolabel
               }
