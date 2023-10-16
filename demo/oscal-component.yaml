@@ -45,7 +45,7 @@ component-definition:
             - Group:            # empty or "" for core group
               Version: v1       # Version of resource
               Resource: pods    # Resource type
-              Namespaces: [default]  # Namespaces to validate the above resources in. Empty or "" for all namespaces or non-namespaced resources
+              Namespaces: [validation-test]  # Namespaces to validate the above resources in. Empty or "" for all namespaces or non-namespaced resources
             # exclude: []
             # rego: |
             #   package match
@@ -66,8 +66,8 @@ component-definition:
 
               foolabel {
                 input.kind == "Pod"
-                podLabels := input.metadata.labels.foo
-                contains(podLabels, "bar") == true
+                podLabel := input.metadata.labels.foo
+                podLabel == "bar"
               }
 
               match {
