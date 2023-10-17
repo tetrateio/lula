@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"sync"
 
 	"github.com/defenseunicorns/lula/src/pkg/common/kubernetes"
@@ -66,6 +67,7 @@ func GetValidatedAssets(ctx context.Context, regoPolicy string, dataset []map[st
 		return matchResult, fmt.Errorf("failed to compile rego policy: %w", err)
 	}
 
+	fmt.Printf("Applying policy against %s resources\n", strconv.Itoa(len(dataset)))
 	for _, asset := range dataset {
 		wg.Add(1)
 		go func(asset map[string]interface{}) {
