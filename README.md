@@ -1,6 +1,9 @@
 # Lula - The Kubernetes Compliance Engine
 
-lula is a tool written to bridge the gap between expected configuration required for compliance and **_actual_** configuration.
+[![Go version](https://img.shields.io/github/go-mod/go-version/defenseunicorns/lula?filename=go.mod)](https://go.dev/)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/lula/badge)](https://api.securityscorecards.dev/projects/github.com/defenseunicorns/lula)
+
+Lula is a tool written to bridge the gap between expected configuration required for compliance and **_actual_** configuration.
 
 Cloud Native Infrastructure, Platforms, and applications can establish OSCAL documents that live beside source-of-truth code bases. Providing an inheritance model for when a control that the technology can satisfy _IS_ satisfied in a live-environment.
 
