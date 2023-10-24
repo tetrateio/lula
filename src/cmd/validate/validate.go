@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
+	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-1/component-definition"
 	"github.com/defenseunicorns/lula/src/pkg/common/oscal"
 	"github.com/defenseunicorns/lula/src/pkg/providers/opa"
 	"github.com/defenseunicorns/lula/src/types"
-	oscalTypes "github.com/defenseunicorns/lula/src/types/oscal"
 	"github.com/spf13/cobra"
 	yaml1 "sigs.k8s.io/yaml"
 )
@@ -118,6 +119,9 @@ func ValidateOnPaths(obj *types.ReportObject) error {
 // It will perform a validation and add data to a referenced report object
 func ValidateOnCompDef(obj *types.ReportObject, compDef oscalTypes.ComponentDefinition) error {
 
+	// Populate a map[uuid]Validation into the validations
+	obj.Validations = oscal.BackMatterToMap(compDef.BackMatter)
+
 	// TODO: Is there a better location for context?
 	ctx := context.Background()
 	// Loops all the way down
@@ -131,21 +135,41 @@ func ValidateOnCompDef(obj *types.ReportObject, compDef oscalTypes.ComponentDefi
 				UUID: controlImplementation.UUID,
 			}
 			for _, implementedRequirement := range controlImplementation.ImplementedRequirements {
+
 				impReq := types.ImplementedReq{
 					UUID:        implementedRequirement.UUID,
 					ControlId:   implementedRequirement.ControlId,
 					Description: implementedRequirement.Description,
 				}
 				var pass, fail int
-				for _, target := range implementedRequirement.Rules {
-					result, err := ValidateOnTarget(ctx, target)
+				// IF the implemented requirement contains a link - check for Lula Validation
+				for _, link := range implementedRequirement.Links {
+					var result types.Result
+					var err error
+					// Current identifier is the link text
+					if link.Text == "Lula Validation" {
+						// Remove the leading '#' from the UUID reference
+						id := strings.Replace(link.Href, "#", "", 1)
+						// Check if the link exists in our pre-populated map of validations
+						if val, ok := obj.Validations[id]; ok {
+							// If the validation has already been evaluated, use the result from the evaluation
+							// Otherwise perform the validation
+							if val.Evaluated {
+								result = val.Result
+							} else {
+								result, err = ValidateOnTarget(ctx, val.Description)
 
-					if err != nil {
-						return err
+								if err != nil {
+									return err
+								}
+							}
+						}
+						pass += result.Passing
+						fail += result.Failing
+						impReq.Results = append(impReq.Results, result)
+
 					}
-					pass += result.Passing
-					fail += result.Failing
-					impReq.Results = append(impReq.Results, result)
+
 				}
 
 				if pass > 0 && fail <= 0 {
