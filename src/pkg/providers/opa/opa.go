@@ -19,32 +19,41 @@ import (
 
 // TODO: What is the new version of the information we are displaying on the command line?
 
-func Validate(ctx context.Context, domain string, data map[string]interface{}) (types.Result, error) {
-
-	if domain == "kubernetes" {
+func InterrogateKubernetes(
+	ctx context.Context,
+	data map[string]interface{},
+) (
+	context.Context,
+	string,
+	map[string]interface{},
+	error,
+) {
 		var payload types.Payload
 		err := mapstructure.Decode(data, &payload)
 		if err != nil {
-			return types.Result{}, err
+			return nil, "", nil, err
 		}
 		collection, err := kube.QueryCluster(ctx, payload.Resources)
 		if err != nil {
-			return types.Result{}, err
+			return nil, "", nil, err
 		}
 
-		// TODO: Add logging optionality for understanding what resources are actually being validated
-		results, err := GetValidatedAssets(ctx, payload.Rego, collection)
-		if err != nil {
-			return types.Result{}, err
-		}
+		return ctx, payload.Rego, collection, nil
+}
 
-		return results, nil
-
-	} else if domain == "api" {
+func InterrogateAPI(
+	ctx context.Context,
+	data map[string]interface{},
+) (
+	context.Context,
+	string,
+	map[string]interface{},
+	error,
+) {
 		var payload types.PayloadAPI
 		err := mapstructure.Decode(data, &payload)
 		if err != nil {
-			return types.Result{}, err
+			return nil, "", nil, err
 		}
 
 		collection := make(map[string]interface{}, 0)
@@ -55,17 +64,16 @@ func Validate(ctx context.Context, domain string, data map[string]interface{}) (
 
 			resp, err := client.Get(request.URL)
 			if err != nil {
-				return types.Result{}, err
+				return nil, "", nil, err
 			}
 			if resp.StatusCode != 200 {
-				return types.Result{},
-					fmt.Errorf("expected status code 200 but got %d\n", resp.StatusCode)
+				return nil, "", nil, fmt.Errorf("expected status code 200 but got %d\n", resp.StatusCode)
 			}
 
 			defer resp.Body.Close()
 			body, err := io.ReadAll(resp.Body)
 			if err != nil {
-				return types.Result{}, err
+				return nil, "", nil, err
 			}
 
 			contentType := resp.Header.Get("Content-Type")
@@ -78,24 +86,46 @@ func Validate(ctx context.Context, domain string, data map[string]interface{}) (
 				var tempData interface{}
 				err = json.Unmarshal([]byte(prettyJson), &tempData)
 				if err != nil {
-					return types.Result{}, err
+					return nil, "", nil, err
 				}
 				collection[request.Name] = tempData
 
 			} else {
-				return types.Result{}, fmt.Errorf("content type %s is not supported", contentType)
+				return nil, "", nil, fmt.Errorf("content type %s is not supported", contentType)
 			}
 		}
 
-		results, err := GetValidatedAssets(ctx, payload.Rego, collection)
+	return ctx, payload.Rego, collection, nil
+}
+
+func Validate(ctx context.Context, domain string, data map[string]interface{}) (types.Result, error) {
+	var rego string
+	collection := make(map[string]interface{}, 0)
+	var err error
+
+	switch domain {
+	case "kubernetes":
+		ctx, rego, collection, err = InterrogateKubernetes(ctx, data)
 		if err != nil {
 			return types.Result{}, err
 		}
-		return results, nil
 
+	case "api":
+		ctx, rego, collection, err = InterrogateAPI(ctx, data)
+		if err != nil {
+			return types.Result{}, err
+		}
+
+	default:
+		return types.Result{}, fmt.Errorf("domain %s is not supported", domain)
 	}
 
-	return types.Result{}, fmt.Errorf("domain %s is not supported", domain)
+	//TODO: Add logging optionality for understanding what resources are actually being validated
+	results, err := GetValidatedAssets(ctx, rego, collection)
+	if err != nil {
+		return types.Result{}, err
+	}
+	return results, nil
 }
 
 // GetValidatedAssets performs the validation of the dataset against the given rego policy
