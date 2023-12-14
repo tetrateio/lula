@@ -34,6 +34,6 @@ func init() {
 
 	toolsCmd.AddCommand(lintCmd)
 
-	lintCmd.Flags().StringVarP(&opts.InputFile, "input-file", "f", "", "the path to a oscal json schema file")
+	lintCmd.Flags().StringVarP(&opts.InputFile, "input-file", "f", "", "the path to an oscal json schema file")
 	lintCmd.Flags().StringVarP(&opts.LogFile, "logger-file", "l", "", "the name of the file to write logs to (outputs to STDERR by default)")
 }
