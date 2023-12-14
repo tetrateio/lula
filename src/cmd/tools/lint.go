@@ -1,6 +1,9 @@
 package tools
 
 import (
+	"log"
+	"os"
+
 	"github.com/defenseunicorns/go-oscal/src/cmd/validate"
 	"github.com/spf13/cobra"
 )
@@ -25,8 +28,24 @@ func init() {
 		Long:    "Validate an OSCAL document is properly configured against the OSCAL schema",
 		Example: lintHelp,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var logFile *os.File
+			if opts.LogFile != ""{
+				var err error
+				logFile, err = os.Create(opts.LogFile)
+				if err != nil {
+					return err
+				}
+				defer logFile.Close()
+				log.SetOutput(logFile)
+			}
 
-			validate.ValidateCommand(opts.InputFile, opts.LogFile)
+			validator, err := validate.ValidateCommand(opts.InputFile)
+			if err != nil {
+				log.Printf("Lint error: %v\n", err)
+				return err
+			}
+
+			log.Printf("Successfully validated %s is valid OSCAL version %s %s\n", opts.InputFile, validator.GetVersion(), validator.GetModelType())
 
 			return nil
 		},

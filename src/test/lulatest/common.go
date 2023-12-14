@@ -23,7 +23,7 @@ var (
 )
 
 // Helper function to execute the Cobra command.
-func executeTestCommand(t *testing.T, root *cobra.Command, args ...string) (string, error) {
+func ExecuteTestCommand(t *testing.T, root *cobra.Command, args ...string) (string, error) {
 	
 	// Use RedirectLog to capture log output
 	logOutput := RedirectLog(t)
