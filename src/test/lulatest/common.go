@@ -19,19 +19,38 @@ var (
 	NoVersionComponentPath          = "../../../test/no-version-component-definition.yaml"
 	InvalidVersionComponentPath     = "../../../test/invalid-version-component-definition.yaml"
 	UnsupportedVersionComponentPath = "../../../test/unsupported-version-component-definition.yaml"
-
+	
+	pathSlice = []string{ValidComponentPath, NoVersionComponentPath, InvalidVersionComponentPath, UnsupportedVersionComponentPath}	
 )
 
+// GetByteMap reads the files in PathSlice and stores them in ByteMap
+func GetByteMap(t *testing.T) {
+	byteMapMtx.Lock()
+	defer byteMapMtx.Unlock()
+	if len(ByteMap) == 0 {
+		for _, path := range pathSlice {
+			bytes, err := os.ReadFile(path)
+			if err != nil {
+				panic(err)
+			}
+			ByteMap[path] = bytes
+		}
+	}
+}
+
+// Function type for creating a new command instance
+type CommandFactory func() *cobra.Command
+
 // Helper function to execute the Cobra command.
-func ExecuteTestCommand(t *testing.T, root *cobra.Command, args ...string) (string, error) {
-	
+func ExecuteTestCommand(t *testing.T, cmdFactory CommandFactory, args ...string) (string, error) {
+	cmd := cmdFactory()
 	// Use RedirectLog to capture log output
 	logOutput := RedirectLog(t)
     
 	// Sets the Cobra command args
-	root.SetArgs(args)
+	cmd.SetArgs(args)
 
-    _, err := root.ExecuteC()
+    _, err := cmd.ExecuteC()
 
 	// Reads the captured Log output
 	capturedLog := ReadLog(t, logOutput)
