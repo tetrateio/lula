@@ -15,9 +15,9 @@ To create a deterministic UUID given some source:
 	lula tools uuidgen <source>
 `
 
-func init() {
+
 	// Kubectl stub command.
-	uuidCmd := &cobra.Command{
+	var uuidCmd = &cobra.Command{
 		Use:     "uuidgen",
 		Short:   "Generate a UUID",
 		Long:    "Generate a UUID at random or deterministically with a provided input",
@@ -35,5 +35,7 @@ func init() {
 		},
 	}
 
+func init () {
 	toolsCmd.AddCommand(uuidCmd)
 }
+

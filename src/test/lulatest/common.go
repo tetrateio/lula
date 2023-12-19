@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 	"sync"
+	"io"
 
 	"github.com/spf13/cobra"
 
@@ -19,6 +20,7 @@ var (
 	NoVersionComponentPath          = "../../../test/no-version-component-definition.yaml"
 	InvalidVersionComponentPath     = "../../../test/invalid-version-component-definition.yaml"
 	UnsupportedVersionComponentPath = "../../../test/unsupported-version-component-definition.yaml"
+	writers                         = []io.Writer{}
 	
 	pathSlice = []string{ValidComponentPath, NoVersionComponentPath, InvalidVersionComponentPath, UnsupportedVersionComponentPath}	
 )
@@ -44,26 +46,37 @@ type CommandFactory func() *cobra.Command
 // Helper function to execute the Cobra command.
 func ExecuteTestCommand(t *testing.T, cmdFactory CommandFactory, args ...string) (string, error) {
 	cmd := cmdFactory()
+
+// Capture standard output
+    stdoutBuf := new(bytes.Buffer)
+    cmd.SetOut(stdoutBuf)
+
 	// Use RedirectLog to capture log output
 	logOutput := RedirectLog(t)
     
 	// Sets the Cobra command args
 	cmd.SetArgs(args)
 
-    _, err := cmd.ExecuteC()
+    err := cmd.Execute()
 
 	// Reads the captured Log output
 	capturedLog := ReadLog(t, logOutput)
     return string(capturedLog), err
 }
 
-func RedirectLog(t *testing.T) *bytes.Buffer {
-	logOutput := new(bytes.Buffer)
-	log.SetOutput(logOutput)
+func ResetTestCommandState(cmd *cobra.Command) {
+	cmd.ResetFlags()
+	cmd.SetArgs(nil)
+}
 
-	t.Cleanup(func() {
-		log.SetOutput(os.Stderr)
-	})
+func RedirectLog(t *testing.T) *bytes.Buffer {
+	logMtx.Lock()
+	defer logMtx.Unlock()
+	logOutput := new(bytes.Buffer)
+	writers = append(writers, logOutput)
+	multiWriter := io.MultiWriter(writers...)
+	log.SetOutput(multiWriter)
+
 	return logOutput
 }
 
