@@ -2,6 +2,7 @@ package tools
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/defenseunicorns/go-oscal/src/pkg/uuid"
 	"github.com/spf13/cobra"
@@ -30,6 +31,7 @@ To create a deterministic UUID given some source:
 				fmt.Println(uuid.NewUUIDWithSource(args[0]))
 				return nil
 			} else {
+				log.Printf("too many arguments")
 				return fmt.Errorf("too many arguments")
 			}
 		},

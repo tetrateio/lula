@@ -53,14 +53,27 @@ func ExecuteTestCommand(t *testing.T, cmdFactory CommandFactory, args ...string)
 
 	// Use RedirectLog to capture log output
 	logOutput := RedirectLog(t)
+
+	// Log the arguments for debugging
+    t.Logf("Executing command with arguments: %v", args)
     
 	// Sets the Cobra command args
 	cmd.SetArgs(args)
 
+	// Execute the command and log errors
     err := cmd.Execute()
+
+	if err != nil {
+        t.Logf("Command execution error: %v", err)
+    }
 
 	// Reads the captured Log output
 	capturedLog := ReadLog(t, logOutput)
+	capturedStdOut := stdoutBuf.String()
+
+	// Log the captured standard output for debugging
+    t.Logf("Captured standard output: %s", capturedStdOut)
+
     return string(capturedLog), err
 }
 
