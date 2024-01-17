@@ -2,10 +2,14 @@ package test
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
+	validator "github.com/defenseunicorns/go-oscal/src/cmd/validate"
 	"github.com/defenseunicorns/lula/src/cmd/validate"
+	"github.com/defenseunicorns/lula/src/pkg/common/oscal"
+	"github.com/defenseunicorns/lula/src/pkg/message"
 	"github.com/defenseunicorns/lula/src/test/util"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/e2e-framework/klient/wait"
@@ -32,8 +36,9 @@ func TestPodLabelValidation(t *testing.T) {
 		}).
 		Assess("Validate pod label", func(ctx context.Context, t *testing.T, config *envconf.Config) context.Context {
 			oscalPath := "./scenarios/pod-label/oscal-component.yaml"
+			message.NoProgress = true
 
-			findingMap, _, err := validate.ValidateOnPath(oscalPath)
+			findingMap, observations, err := validate.ValidateOnPath(oscalPath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -44,6 +49,54 @@ func TestPodLabelValidation(t *testing.T) {
 					t.Fatal("State should be satisfied, but got :", state)
 				}
 			}
+
+			// Test report generation
+			report, err := oscal.GenerateAssessmentResults(findingMap, observations)
+			if err != nil {
+				t.Fatal("Failed generation of Assessment Results object with: ", err)
+			}
+
+			// Write report(s) to file
+			err = validate.WriteReport(report, "sar-test.yaml")
+			if err != nil {
+				t.Fatal("Failed to write report to file: ", err)
+			}
+
+			initialResultCount := len(report.Results)
+
+			//Perform the write operation again and read the file to ensure result was appended
+			report, err = oscal.GenerateAssessmentResults(findingMap, observations)
+			if err != nil {
+				t.Fatal("Failed generation of Assessment Results object with: ", err)
+			}
+
+			// Write report(s) to file
+			err = validate.WriteReport(report, "sar-test.yaml")
+			if err != nil {
+				t.Fatal("Failed to write report to file: ", err)
+			}
+
+			data, err := os.ReadFile("sar-test.yaml")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			tempAssessment, err := oscal.NewAssessmentResults(data)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// The number of results in the file should be more than initially
+			if len(tempAssessment.Results) <= initialResultCount {
+				t.Fatal("Failed to append results to existing report")
+			}
+
+			validator, err := validator.ValidateCommand("sar-test.yaml")
+			if err != nil {
+				t.Fatal("File failed linting")
+			}
+			message.Infof("Successfully validated %s is valid OSCAL version %s %s\n", "sar-test.yaml", validator.GetSchemaVersion(), validator.GetModelType())
+
 			return ctx
 		}).
 		Teardown(func(ctx context.Context, t *testing.T, config *envconf.Config) context.Context {
@@ -71,6 +124,7 @@ func TestPodLabelValidation(t *testing.T) {
 		}).
 		Assess("Validate pod label", func(ctx context.Context, t *testing.T, config *envconf.Config) context.Context {
 			oscalPath := "./scenarios/pod-label/oscal-component.yaml"
+			message.NoProgress = true
 
 			findingMap, _, err := validate.ValidateOnPath(oscalPath)
 			if err != nil {

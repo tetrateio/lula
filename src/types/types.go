@@ -22,6 +22,7 @@ type Result struct {
 // This could be expanded as providers add more fields
 type Payload struct {
 	Resources []Resource `json:"resources" yaml:"resources"`
+	Wait      Wait       `json:"wait" yaml:"wait"`
 	Rego      string     `json:"rego" yaml:"rego"`
 }
 
@@ -29,6 +30,14 @@ type Resource struct {
 	Name         string       `json:"name" yaml:"name"`
 	Description  string       `json:"description" yaml:"description"`
 	ResourceRule ResourceRule `json:"resource-rule" yaml:"resource-rule"`
+}
+
+type Wait struct {
+	Condition string `json:"condition" yaml:"condition"`
+	Jsonpath  string `json:"jsonpath" yaml:"jsonpath"`
+	Kind      string `json:"kind" yaml:"kind"`
+	Namespace string `json:"namespace" yaml:"namespace"`
+	Timeout   string `json:"timeout" yaml:"timeout"`
 }
 
 type PayloadAPI struct {

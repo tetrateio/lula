@@ -1,0 +1,8 @@
+name: install-tools
+description: "Install pipeline tools"
+
+runs:
+  using: composite
+  steps:
+
+    - uses: anchore/sbom-action/download-syft@c7f031d9249a826a082ea14c79d3b686a51d485a # v0.15.3

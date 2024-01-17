@@ -20,13 +20,18 @@ import (
 // TODO: What is the new version of the information we are displaying on the command line?
 
 func Validate(ctx context.Context, domain string, data map[string]interface{}) (types.Result, error) {
-
 	if domain == "kubernetes" {
 		var payload types.Payload
 		err := mapstructure.Decode(data, &payload)
 		if err != nil {
 			return types.Result{}, err
 		}
+
+		err = kube.EvaluateWait(payload.Wait)
+		if err != nil {
+			return types.Result{}, err
+		}
+
 		collection, err := kube.QueryCluster(ctx, payload.Resources)
 		if err != nil {
 			return types.Result{}, err
