@@ -1,12 +1,13 @@
-package tools
+package toolstest
 
 import (
 	"strings"
 	"sync"
 	"testing"
 
-	"github.com/defenseunicorns/lula/src/test/lulatest"
 	"github.com/spf13/cobra"
+	"github.com/defenseunicorns/lula/src/cmd"
+	"github.com/defenseunicorns/lula/src/test/lulatest"
 )
 
 var mutex sync.Mutex
@@ -23,18 +24,18 @@ func TestUUIDGENCmd(t *testing.T) {
 		{
 
 			name: "Test the uuidCmd with no arguments.",
-			args: []string{""},
+			args: []string{"tools", "uuidgen", ""},
 			wantErr: false,
 		},
 		{
 			name: "Test the uuidCmd with one argument.",
-			args: []string{"https://lula.dev"},
+			args: []string{"tools", "uuidgen", "https://lula.dev"},
 			wantErr: false,
 		},
 
 		{
 			name: "Test the uuidCmd with too many arguments.",
-			args: []string{"https://lula.dev", "https://lula2.dev"},
+			args: []string{"tools", "uuidgen", "https://lula.dev", "https://lula2.dev"},
 			wantErr: true,
 			logCheck: func(t *testing.T, logOutput string) {
 				if !strings.Contains(logOutput, "too many arguments") {
@@ -52,7 +53,7 @@ func TestUUIDGENCmd(t *testing.T) {
 			mutex.Lock() // Lock before executing command
 			// defer mutex.Unlock() // Unlock after executing the command
 			logOutput, err := lulatest.ExecuteTestCommand(t, func() *cobra.Command {
-				return uuidCmd
+				return cmd.GetRootCmdForTesting()
 			}, tt.args...)
 			mutex.Unlock()
 

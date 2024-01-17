@@ -30,3 +30,7 @@ func init() {
 	tools.Include(rootCmd)
 	version.Include(rootCmd)
 }
+
+func GetRootCmdForTesting() *cobra.Command {
+    return rootCmd
+}
