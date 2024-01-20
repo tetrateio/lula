@@ -71,7 +71,10 @@ test-e2e:
 test-cmd: 
 	cd src/cmd && go clean -testcache && go test $(GOFLAGS) -run $(TESTS) $(PKG) $(TESTFLAGS)
 
+.PHONY: test-intergration
+test-intergration: build ## Run Interfgration Tests
+	cd src/test/intergration && go clean -testcache && go test $(GOFLAGS) -run $(TESTS) $(PKG) $(TESTFLAGS)
+
 .PHONY: install
 install: ## Install binary to $INSTALL_PATH.
 	@install "$(BINDIR)/$(BINNAME)" "$(INSTALL_PATH)/$(BINNAME)"
-

@@ -1,15 +1,15 @@
-package toolstest
+package tools
 
 import (
 	"testing"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
-	"github.com/defenseunicorns/lula/src/cmd"
 )
 
 func TestInclude(t *testing.T) {
-	rootCmd := cmd.GetRootCmdForTesting()
+	rootCmd := &cobra.Command{Use: "root"}
+	Include(rootCmd)
 	assert.True(t, containsCommand(rootCmd.Commands(), "tools"), "tools should be a subcommand of rootCmd")
 }
 

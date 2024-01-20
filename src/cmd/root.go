@@ -67,7 +67,3 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", "info", "Log level when running Lula. Valid options are: warn, info, debug, trace")
 }
-
-func GetRootCmdForTesting() *cobra.Command {
-    return rootCmd
-}
