@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	kube "github.com/defenseunicorns/lula/src/pkg/common/kubernetes"
+	"github.com/defenseunicorns/lula/src/pkg/message"
 	"github.com/defenseunicorns/lula/src/types"
 	"github.com/mitchellh/mapstructure"
 
@@ -106,10 +107,15 @@ func Validate(ctx context.Context, domain string, data map[string]interface{}) (
 // GetValidatedAssets performs the validation of the dataset against the given rego policy
 func GetValidatedAssets(ctx context.Context, regoPolicy string, dataset map[string]interface{}) (types.Result, error) {
 	var matchResult types.Result
+	var trace bool
+
+	if message.GetLogLevel() == 3 {
+		trace = true
+	}
 
 	if len(dataset) == 0 {
 		// Not an error but no entries to validate
-		// TODO: add a warning log
+		message.Warn("no entries to validate")
 		return matchResult, nil
 	}
 
@@ -125,9 +131,13 @@ func GetValidatedAssets(ctx context.Context, regoPolicy string, dataset map[stri
 		rego.Query("data.validate"),
 		rego.Compiler(compiler),
 		rego.Input(dataset),
+		rego.Trace(trace),
 	)
 
 	resultSet, err := regoCalc.Eval(ctx)
+	if trace {
+		rego.PrintTrace(message.LogWriter, regoCalc)
+	}
 
 	if err != nil || resultSet == nil || len(resultSet) == 0 {
 		return matchResult, fmt.Errorf("failed to evaluate rego policy: %w", err)
@@ -145,7 +155,7 @@ func GetValidatedAssets(ctx context.Context, regoPolicy string, dataset map[stri
 			if err != nil {
 				return matchResult, fmt.Errorf("failed to unmarshal expression: %w", err)
 			}
-			// TODO: add logging optionality here for developer experience
+			// check for number of keys in map > 0
 			if matched, ok := expressionMap["validate"]; ok && matched.(bool) {
 				// TODO: Is there a way to determine how many resources failed?
 				matchResult.Passing += 1
