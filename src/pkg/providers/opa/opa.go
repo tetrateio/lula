@@ -16,6 +16,7 @@ import (
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
+	"github.com/open-policy-agent/opa/topdown"
 )
 
 // TODO: What is the new version of the information we are displaying on the command line?
@@ -106,12 +107,15 @@ func Validate(ctx context.Context, domain string, data map[string]interface{}) (
 
 // GetValidatedAssets performs the validation of the dataset against the given rego policy
 func GetValidatedAssets(ctx context.Context, regoPolicy string, dataset map[string]interface{}) (types.Result, error) {
+	message.Debug(message.JSONValue(dataset))
 	var matchResult types.Result
-	var trace bool
+	// var trace bool
 
-	if message.GetLogLevel() == 3 {
-		trace = true
-	}
+	buf := topdown.NewBufferTracer()
+
+	// if message.GetLogLevel() == 3 {
+	// 	trace = true
+	// }
 
 	if len(dataset) == 0 {
 		// Not an error but no entries to validate
@@ -131,12 +135,43 @@ func GetValidatedAssets(ctx context.Context, regoPolicy string, dataset map[stri
 		rego.Query("data.validate"),
 		rego.Compiler(compiler),
 		rego.Input(dataset),
-		rego.Trace(trace),
+		rego.QueryTracer(buf),
 	)
 
 	resultSet, err := regoCalc.Eval(ctx)
-	if trace {
-		rego.PrintTrace(message.LogWriter, regoCalc)
+
+	for _, value := range *buf {
+		// message.Debug(value.Locals) // contains the payload for the resources but in many different "locals"
+		// Ex:	every pod in pods
+		// 				podLabel = pod.metadata.labels.foo
+		//				podLabel == "bar"
+		// { __local3__ = input.podsvt; every __local0__, __local1__ in __local3__ { __local2__ = __local1__.metadata.labels.foo; __local2__ = "bar" } }
+		// message.Debug(value.Message) // Nothing too useful
+		// message.Debug(message.JSONValue(value.Node)) // Lot of information
+
+		// if value.HasExpr() {
+		// 	message.Debug("Has expression")
+		// 	if value.HasRule() {
+		// 		message.Debug("Has rule")
+		// 	}
+		// if value.HasBody() {
+		// 	message.Debug("Has Body")
+		// }
+		// }
+
+		// if value.HasBody() {
+		// 	message.Debug("Has Body")
+		// 	message.Debug(value.LocalMetadata)
+		// }
+
+		if value.HasRule() {
+			message.Debug("Has rule")
+			// message.Debug(value.Ref) // nil
+
+			message.Debug(value.Locals)
+			// message.Debug(value.String())
+		}
+
 	}
 
 	if err != nil || resultSet == nil || len(resultSet) == 0 {
@@ -144,7 +179,9 @@ func GetValidatedAssets(ctx context.Context, regoPolicy string, dataset map[stri
 	}
 
 	for _, result := range resultSet {
+		// message.Debug(result)
 		for _, expression := range result.Expressions {
+			// message.Debug(expression)
 			expressionBytes, err := json.Marshal(expression.Value)
 			if err != nil {
 				return matchResult, fmt.Errorf("failed to marshal expression: %w", err)
