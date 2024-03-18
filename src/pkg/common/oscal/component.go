@@ -31,9 +31,9 @@ func BackMatterToMap(backMatter oscalTypes_1_1_2.BackMatter) map[string]types.Va
 
 	for _, resource := range backMatter.Resources {
 		if resource.Title == "Lula Validation" {
-			var description types.Description
+			var validation types.Validation
 
-			err := yaml.Unmarshal([]byte(resource.Description), &description)
+			err := yaml.Unmarshal([]byte(resource.Description), &validation)
 			if err != nil {
 				fmt.Printf("Error marshalling yaml: %s\n", err.Error())
 				return nil
@@ -45,8 +45,8 @@ func BackMatterToMap(backMatter oscalTypes_1_1_2.BackMatter) map[string]types.Va
 			currentVersion := strings.Split(config.CLIVersion, "-")[0]
 
 			versionConstraint := currentVersion
-			if description.LulaVersion != "" {
-				versionConstraint = description.LulaVersion
+			if validation.LulaVersion != "" {
+				versionConstraint = validation.LulaVersion
 			}
 
 			validVersion, versionErr := common.IsVersionValid(versionConstraint, currentVersion)
@@ -60,13 +60,9 @@ func BackMatterToMap(backMatter oscalTypes_1_1_2.BackMatter) map[string]types.Va
 				evaluated = true
 			}
 
-			// Create validation
-			validation := types.Validation{
-				Title:       resource.Title,
-				Description: description.Target,
-				Evaluated:   evaluated,
-				Result:      result,
-			}
+			validation.Title = resource.Title
+			validation.Evaluated = evaluated
+			validation.Result = result
 
 			resourceMap[resource.UUID] = validation
 		}

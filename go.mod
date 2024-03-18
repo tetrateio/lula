@@ -5,7 +5,6 @@ go 1.22.1
 require (
 	github.com/defenseunicorns/go-oscal v0.2.5
 	github.com/hashicorp/go-version v1.6.0
-	github.com/mitchellh/mapstructure v1.5.0
 	github.com/open-policy-agent/opa v0.62.1
 	github.com/pterm/pterm v0.12.79
 	github.com/sergi/go-diff v1.3.1
