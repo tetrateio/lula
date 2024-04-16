@@ -14,6 +14,9 @@ type LulaValidation struct {
 	// Domain is the domain that provides the evidence for the validation
 	Domain Domain
 
+	// DomainResources is the set of resources that the domain is providing
+	DomainResources DomainResources
+
 	// LulaValidationType is the type of validation that is being performed
 	LulaValidationType LulaValidationType
 
@@ -24,6 +27,9 @@ type LulaValidation struct {
 	Result Result
 }
 
+// LulaValidationMap is a map of LulaValidation objects
+type LulaValidationMap = map[string]LulaValidation
+
 // Perform the validation, and store the result in the LulaValidation struct
 func (val *LulaValidation) Validate() error {
 	if !val.Evaluated {
@@ -32,6 +38,8 @@ func (val *LulaValidation) Validate() error {
 		if err != nil {
 			return err
 		}
+		// Bookkeeping of the domain resources for use elsewhere
+		val.DomainResources = domainResources
 		// Perform the evaluation using the provider
 		result, err := val.Provider.Evaluate(domainResources)
 		if err != nil {
