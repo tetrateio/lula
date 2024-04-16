@@ -1,17 +1,12 @@
 package report
 
 import (
-	// "bytes"
 	"errors"
 	"fmt"
 	"os"
 	"encoding/json"
-	// "strings"
-	// "time"
 
-	// "github.com/defenseunicorns/go-oscal/src/pkg/uuid"
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
-	// "github.com/defenseunicorns/lula/src/pkg/common/oscal"
 	"github.com/defenseunicorns/lula/src/pkg/message"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -101,7 +96,6 @@ func init() {
 }
 	reportCmd.AddCommand(componentDefinitionCmd)
 
-	// insert flag options here
 	componentDefinitionCmd.Flags().StringVarP(&opts.InputFile, "input-file", "f", "", "the path to the target OSCAL component definition")
 	componentDefinitionCmd.Flags().StringVarP(&opts.OutputFormat, "output-format", "o", "json", "the output format of the report")
 	componentDefinitionCmd.Flags().StringVarP(&opts.OutputFile, "output-file", "w", "", "the output file path for the report")
