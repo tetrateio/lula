@@ -118,6 +118,14 @@ func init() {
 				message.Fatalf(err, "error writing result: %v", err)
 			}
 
+			// Print observations if there are any
+			if len(validation.Result.Observations) > 0 {
+				message.Infof("Observations:")
+				for key, observation := range validation.Result.Observations {
+					message.Infof("--> %s: %s", key, observation)
+				}
+			}
+
 			result := validation.Result.Failing == 0
 			// If the expected result is not equal to the actual result, return an error
 			if validateOpts.ExpectedResult != result {
