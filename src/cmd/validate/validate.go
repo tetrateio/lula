@@ -116,7 +116,7 @@ func ValidateOnPath(path string) (findingMap map[string]oscalTypes_1_1_2.Finding
 	}
 	defer resetCwd()
 
-	compDef, err := oscal.NewOscalComponentDefinition(data)
+	compDef, err := oscal.NewOscalComponentDefinition(path, data)
 	if err != nil {
 		return findingMap, observations, err
 	}
