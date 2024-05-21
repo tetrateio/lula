@@ -32,14 +32,13 @@ Lula will operate against the intent of a Catalog baseline for the purpose of th
 - An `assessment result` will outline the state after assessment based upon the the result of each control as identified in the `assessment plan`
 - A `plan of actions and milestones` will outline planned remediation for subsequent findings in the `assessment results` that were identified as not-satisfied
 
-<Add a mermaid daigram here>
-
 ### Artifact Strategy
 
-Given the context above, Lula will enrich the process through generation and the automation of artifacts and the content that comprises them. There are multiple workflows that allow for the similar outcomes - Lula will be focused on enhancing the use of transient data from available context through the following but not limited to:
+Given the context above, Lula will enrich the process through generation and the automation of artifacts and the content that comprises them. There are multiple workflows that allow for the similar outcomes - Lula focuses on enhancing the use of transient data from available context through the following but not limited to:
 - Generation of a `component-definition` will allow for initial mapping of controls for one-to-many catalogs/standards for a given component
   - A `validation` is a Lula construct for automation for use in a body-of-evidence towards a control/implemented-requirement being `satisfied` or `not-satisfied`
   - A single control/implemented-requirement may have many `validations`
+  - A `component-defintion` serves as both the reusable compliance information, as well as the interface for overriding validations from other imported/inherited control information for a given component
 - A `component definition` can be validated using established `validations` to assess the component against an established threshold in isolation.
   - This threshold and output of a validation is represented in the `assessment results` model/artifact
 - When a target environment has been established, multiple `component definitions` can be aggregated into a top-level `component-definition` via the `import component definitions` field
@@ -51,8 +50,28 @@ Given the context above, Lula will enrich the process through generation and the
 
 There may be additional workflows for generation and context-building within these artifacts that become advisable based on situational needs.
 
-<Diagram here for generation workflows>
-
+<discuss types of validations - IE non-technical controls>
+```mermaid
+flowchart TD
+    a[Component Repo A] --> |generate component| A(Component Definition A)
+    b[Component Repo B] --> |generate component| B(Component Definition B)
+    c[Component Repo C] --> |generate component| C(Component Definition B)
+    A --> |validate| D(Assessment Result)
+    B --> |validate| E(Assessment Result)
+    C --> |validate| F(Assessment Result)
+    d[Staging Environment] --> |generate component| G(Component Definition Staging)
+    A --> G
+    B --> G
+    C --> G
+    G --> |generate assessment-plan| H(Assessment Plan)
+    H --> |Validate| I(Assessment Results)
+    e[Prod Environment] --> |generate component| J(Component Definition Prod)
+    G --> J
+    J --> |generate assessment-plan| K(Assessment Plan)
+    J --> |generate system-security-plan| L(System Security Plan)
+    K --> |validate| M(Assessment Results)
+    M --> |generate poam| N(Plan of Actions and Milestones)
+```
 ### Content Management
 <where will the content exist>
 <how will it exist>
