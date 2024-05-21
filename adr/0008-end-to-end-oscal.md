@@ -38,10 +38,10 @@ Given the context above, Lula will enrich the process through generation and the
 - Generation of a `component-definition` will allow for initial mapping of controls for one-to-many catalogs/standards for a given component
   - A `validation` is a Lula construct for automation for use in a body-of-evidence towards a control/implemented-requirement being `satisfied` or `not-satisfied`
   - A single control/implemented-requirement may have many `validations`
-  - A `component-defintion` serves as both the reusable compliance information, as well as the interface for overriding validations from other imported/inherited control information for a given component
+  - A `component definition` serves as both the reusable compliance information, as well as the interface for overriding validations from other imported/inherited control information for a given component
 - A `component definition` can be validated using established `validations` to assess the component against an established threshold in isolation.
   - This threshold and output of a validation is represented in the `assessment results` model/artifact
-- When a target environment has been established, multiple `component definitions` can be aggregated into a top-level `component-definition` via the `import component definitions` field
+- When a target environment has been established, multiple `component definitions` can be aggregated into a top-level `component definition` via the `import component definitions` field
   - This system `component definition` allows for additional context/controls/implemented-requirements to be added based upon configuration or potential inheritance
   - This system `component definition` will then be used for the generation of a `system security plan` and an `assessment plan`
     - It is intended that the `assessment plan` be used for performing automated validation against a system in accordance with Risk Management Framework processes
@@ -49,8 +49,6 @@ Given the context above, Lula will enrich the process through generation and the
 - With an `assessment result`, a `plan of actions and milestones` can be generated to outline the remediation of a system based on findings that were identified as `not-satisfied`
 
 There may be additional workflows for generation and context-building within these artifacts that become advisable based on situational needs.
-
-<discuss types of validations - IE non-technical controls>
 ```mermaid
 flowchart TD
     a[Component Repo A] --> |generate component| A(Component Definition A)
@@ -73,9 +71,20 @@ flowchart TD
     M --> |generate poam| N(Plan of Actions and Milestones)
 ```
 ### Content Management
-<where will the content exist>
-<how will it exist>
-<retaining human authored changes>
+
+Lula will enable artifacts to be co-located in a single file or written to individually managed files. The [go-oscal](https://github.com/defenseunicorns/go-oscal) library and types for OSCAL were built to support a use-case where all OSCAL models can be represented as a single artifact. The single artifact representation allows for context sharing between models and the handling of the existing data.
+
+Lula will enable models to be represented as one more many artifacts:
+- Each model can be represented as a single artifact/file and references can be established between artifacts
+  - This results in a collection of many files where each file may represent a given model
+- All models can be represented as a single artifact/file and references can be established between models
+  - This results in a single file containing all machine-readable information
+
+Both scenarios will support composition/decomposition from one scenario to the other. The core focus of how Lula maintains the content of each model will be represented in the design principle for OSCAL data management that focuses on ensuring the existing data (whether generated, manually authored, or both) is retained across operations unless otherwise documented as owned by automation.
+
+### Validation
+
+A `validation` is automation used to provide process for the collection of some data and a policy that describes adherence of that data required for a given control. This automation will encompass technical and non-technical controls in order to facilitate the use of OSCAL for end-to-end accreditation. A `domain` is a Lula construct that exists to provide an interface and guardrails for the collection of data or performance of some audit. A `domain` provides the ability to establish guardrails while also enhancing the expected structure of inputs for a given `validation`. This means Lula will support automation that processes evidence for a given requirement provided the domain exists to enable processing the required data - enabling techical as well as non-technical requirements to be assessed. 
 
 ## Decision
 
