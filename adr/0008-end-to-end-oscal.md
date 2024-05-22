@@ -84,11 +84,14 @@ Both scenarios will support composition/decomposition from one scenario to the o
 
 ### Validation
 
-A `validation` is automation used to provide process for the collection of some data and a policy that describes adherence of that data required for a given control. This automation will encompass technical and non-technical controls in order to facilitate the use of OSCAL for end-to-end accreditation. A `domain` is a Lula construct that exists to provide an interface and guardrails for the collection of data or performance of some audit. A `domain` provides the ability to establish guardrails while also enhancing the expected structure of inputs for a given `validation`. This means Lula will support automation that processes evidence for a given requirement provided the domain exists to enable processing the required data - enabling techical as well as non-technical requirements to be assessed. 
+A `validation` is automation used to provide process for the collection of some data and a policy that describes adherence of that data required for a given control. This automation will encompass technical and non-technical controls in order to facilitate the use of OSCAL for end-to-end accreditation. A `domain` is a Lula construct that exists to provide an interface and guardrails for the collection of data or performance of some audit. A `domain` provides the ability to establish guardrails while also enhancing the expected structure of inputs for a given `validation`. This means Lula will support automation that processes evidence for a given requirement provided the domain exists to enable processing the required data - enabling technical as well as non-technical requirements to be assessed. 
 
 ## Decision
 
-
+The decision will be the utilization of OSCAL-native processes for how to orchestrate end-to-end compliance. This will mean further alignment to the OSCAL framework and ultimately lead to artifacts used with Lula having greater provenance and portability across many reporting systems.
 
 ## Consequences
 
+- Further alignment with the OSCAL framework
+- Reduced overhead for tooling, maintenance, and support of custom workflows
+- Restricted to current OSCAL constructs or custom namespace implementations
