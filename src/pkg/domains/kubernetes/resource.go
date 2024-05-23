@@ -48,9 +48,11 @@ func QueryCluster(ctx context.Context, resources []Resource) (map[string]interfa
 // GetResourcesDynamically() requires a dynamic interface and processes GVR to return []map[string]interface{}
 // This function is used to query the cluster for specific subset of resources required for processing
 func GetResourcesDynamically(ctx context.Context,
-	resource ResourceRule) (
+	resource *ResourceRule) (
 	[]map[string]interface{}, error) {
-
+	if resource == nil {
+		return nil, fmt.Errorf("resource rule is nil")
+	}
 	config, err := connect()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to k8s cluster: %w", err)
@@ -85,7 +87,7 @@ func GetResourcesDynamically(ctx context.Context,
 					return nil, err
 				}
 				// If field is specified, get the field data
-				if resource.Field.Jsonpath != "" {
+				if resource.Field != nil && resource.Field.Jsonpath != "" {
 					item, err = getFieldValue(item, resource.Field)
 					if err != nil {
 						return nil, err
@@ -159,8 +161,10 @@ func reduceByName(name string, items []unstructured.Unstructured) (map[string]in
 }
 
 // getFieldValue() looks up the field from a resource and returns a map[string]interface{} representation of the data
-func getFieldValue(item map[string]interface{}, field Field) (map[string]interface{}, error) {
-
+func getFieldValue(item map[string]interface{}, field *Field) (map[string]interface{}, error) {
+	if field == nil {
+		return nil, fmt.Errorf("field is nil")
+	}
 	// Identify the field in item
 	pathParts := strings.Split(field.Jsonpath, ".")[1:]
 	current := item

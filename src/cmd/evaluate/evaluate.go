@@ -3,6 +3,7 @@ package evaluate
 import (
 	"fmt"
 
+	"github.com/defenseunicorns/go-oscal/src/pkg/files"
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/pkg/common"
 	"github.com/defenseunicorns/lula/src/pkg/common/oscal"
@@ -47,15 +48,25 @@ func EvaluateCommand() *cobra.Command {
 	return evaluateCmd
 }
 
-func EvaluateAssessmentResults(files []string) error {
+func EvaluateAssessmentResults(fileArray []string) error {
 	var status bool
 	var findings map[string][]oscalTypes_1_1_2.Finding
+
 	// Read in files - establish the results to
-	if len(files) == 0 {
+	if len(fileArray) == 0 {
 		// TODO: Determine if we will handle a default location/name for assessment files
 		return fmt.Errorf("No files provided for evaluation")
-	} else if len(files) == 1 {
-		data, err := common.ReadFileToBytes(files[0])
+	}
+
+	for _, f := range fileArray {
+		err := files.IsJsonOrYaml(f)
+		if err != nil {
+			return fmt.Errorf("invalid file extension: %s, requires .json or .yaml", f)
+		}
+	}
+
+	if len(fileArray) == 1 {
+		data, err := common.ReadFileToBytes(fileArray[0])
 		if err != nil {
 			return err
 		}
@@ -68,13 +79,13 @@ func EvaluateAssessmentResults(files []string) error {
 		}
 		// We write results to the assessment-results report in newest -> oldest
 		// Older being our threshold here
-		status, findings, err = EvaluateResults(assessment.Results[1], assessment.Results[0])
+		status, findings, err = EvaluateResults(&assessment.Results[1], &assessment.Results[0])
 		if err != nil {
 			return err
 		}
 
-	} else if len(files) == 2 {
-		data, err := common.ReadFileToBytes(files[0])
+	} else if len(fileArray) == 2 {
+		data, err := common.ReadFileToBytes(fileArray[0])
 		if err != nil {
 			return err
 		}
@@ -82,7 +93,7 @@ func EvaluateAssessmentResults(files []string) error {
 		if err != nil {
 			return err
 		}
-		data, err = common.ReadFileToBytes(files[1])
+		data, err = common.ReadFileToBytes(fileArray[1])
 		if err != nil {
 			return err
 		}
@@ -94,7 +105,7 @@ func EvaluateAssessmentResults(files []string) error {
 		// Consider parsing the timestamps for comparison
 		// Older timestamp being the threshold
 
-		status, findings, err = EvaluateResults(assessmentOne.Results[0], assessmentTwo.Results[0])
+		status, findings, err = EvaluateResults(&assessmentOne.Results[0], &assessmentTwo.Results[0])
 		if err != nil {
 			return err
 		}
@@ -120,17 +131,17 @@ func EvaluateAssessmentResults(files []string) error {
 	}
 }
 
-func EvaluateResults(thresholdResult oscalTypes_1_1_2.Result, newResult oscalTypes_1_1_2.Result) (bool, map[string][]oscalTypes_1_1_2.Finding, error) {
+func EvaluateResults(thresholdResult *oscalTypes_1_1_2.Result, newResult *oscalTypes_1_1_2.Result) (bool, map[string][]oscalTypes_1_1_2.Finding, error) {
+	if thresholdResult == nil || thresholdResult.Findings == nil || newResult == nil || newResult.Findings == nil {
+		return false, nil, fmt.Errorf("results must contain findings to evaluate")
+	}
+
 	spinner := message.NewProgressSpinner("Evaluating Assessment Results %s against %s", newResult.UUID, thresholdResult.UUID)
 	defer spinner.Stop()
 
 	// Store unique findings for review here
 	findings := make(map[string][]oscalTypes_1_1_2.Finding, 0)
 	result := true
-
-	if thresholdResult.Findings == nil || newResult.Findings == nil {
-		return false, nil, fmt.Errorf("Results must contain findings to evaluate")
-	}
 
 	findingMapThreshold := oscal.GenerateFindingsMap(*thresholdResult.Findings)
 	findingMapNew := oscal.GenerateFindingsMap(*newResult.Findings)

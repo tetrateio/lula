@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/defenseunicorns/go-oscal/src/pkg/files"
 	"github.com/defenseunicorns/go-oscal/src/pkg/uuid"
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/pkg/common"
@@ -44,6 +45,11 @@ var validateCmd = &cobra.Command{
 			message.Fatal(errors.New("flag input-file is not set"),
 				"Please specify an input file with the -f flag")
 		}
+
+		if err := files.IsJsonOrYaml(opts.InputFile); err != nil {
+			message.Fatalf(err, "Invalid file extension: %s, requires .json or .yaml", opts.InputFile)
+		}
+
 		// Primary expected path for validation of OSCAL documents
 		findings, observations, err := ValidateOnPath(opts.InputFile)
 		if err != nil {
@@ -59,8 +65,8 @@ var validateCmd = &cobra.Command{
 			AssessmentResults: report,
 		}
 
-		// Write the component definition to file
-		err = common.WriteFile(opts.OutputFile, &model)
+		// Write the assessment results to file
+		err = oscal.WriteOscalModel(opts.OutputFile, &model)
 		if err != nil {
 			message.Fatalf(err, "error writing component to file")
 		}
@@ -121,7 +127,7 @@ func ValidateOnPath(path string) (findingMap map[string]oscalTypes_1_1_2.Finding
 	}
 	defer resetCwd()
 
-	compDef, err := oscal.NewOscalComponentDefinition(path, data)
+	compDef, err := oscal.NewOscalComponentDefinition(data)
 	if err != nil {
 		return findingMap, observations, err
 	}
@@ -279,10 +285,11 @@ func ValidateOnCompDef(compDef *oscalTypes_1_1_2.ComponentDefinition) (map[strin
 // This is the OSCAL document generation for final output.
 // This should include some ability to consolidate controls met in multiple input documents under single control entries
 // This should include fields that reference the source of the control to the original document ingested
+// TODO: This is unused - remove?
 func WriteReport(report oscalTypes_1_1_2.AssessmentResults, assessmentFilePath string) error {
 
 	var fileName string
-	var tempAssessment oscalTypes_1_1_2.AssessmentResults
+	var tempAssessment *oscalTypes_1_1_2.AssessmentResults
 
 	if assessmentFilePath != "" {
 
@@ -308,7 +315,7 @@ func WriteReport(report oscalTypes_1_1_2.AssessmentResults, assessmentFilePath s
 
 		} else if os.IsNotExist(err) {
 			// File does not exist
-			tempAssessment = report
+			tempAssessment = &report
 			fileName = assessmentFilePath
 		} else {
 			// Some other error occurred (permission issues, etc.)
@@ -316,15 +323,15 @@ func WriteReport(report oscalTypes_1_1_2.AssessmentResults, assessmentFilePath s
 		}
 
 	} else {
-		tempAssessment = report
+		tempAssessment = &report
 		currentTime := time.Now()
-		fileName = "assessment-results-" + currentTime.Format("01-02-2006-15:04:05") + ".yaml"
+		fileName = "assessment-results-" + currentTime.Format("01-02-206-15:04:05") + ".yaml"
 	}
 
 	var b bytes.Buffer
 
 	var sar = oscalTypes_1_1_2.OscalModels{
-		AssessmentResults: &tempAssessment,
+		AssessmentResults: tempAssessment,
 	}
 
 	yamlEncoder := yaml.NewEncoder(&b)

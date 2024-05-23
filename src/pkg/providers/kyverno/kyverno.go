@@ -12,15 +12,20 @@ import (
 	jsonengine "github.com/kyverno/kyverno-json/pkg/json-engine"
 )
 
-func GetValidatedAssets(ctx context.Context, kyvernoPolicies *kjson.ValidatingPolicy, resources map[string]interface{}, output KyvernoOutput) (types.Result, error) {
+func GetValidatedAssets(ctx context.Context, kyvernoPolicies *kjson.ValidatingPolicy, resources map[string]interface{}, output *KyvernoOutput) (types.Result, error) {
 	var matchResult types.Result
 
 	if len(resources) == 0 {
+		matchResult.Observations = map[string]string{"Kyverno validation not performed": "No resources to validate"}
 		return matchResult, nil
 	}
 
 	if kyvernoPolicies == nil {
 		return matchResult, fmt.Errorf("kyverno policy is not provided")
+	}
+
+	if output == nil {
+		output = &KyvernoOutput{}
 	}
 
 	validationSet := make(map[string]map[string]bool)

@@ -3,31 +3,34 @@ package opa
 import (
 	"context"
 	"fmt"
-	"log"
 	"reflect"
 
 	"github.com/defenseunicorns/lula/src/pkg/message"
 	"github.com/defenseunicorns/lula/src/types"
-
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
 )
 
 // GetValidatedAssets performs the validation of the dataset against the given rego policy
-func GetValidatedAssets(ctx context.Context, regoPolicy string, dataset map[string]interface{}, output OpaOutput) (types.Result, error) {
+func GetValidatedAssets(ctx context.Context, regoPolicy string, dataset map[string]interface{}, output *OpaOutput) (types.Result, error) {
 	var matchResult types.Result
 
 	if len(dataset) == 0 {
 		// Not an error but no entries to validate
 		// TODO: add a warning log
+		matchResult.Observations = map[string]string{"OPA validation not performed": "No resources to validate"}
 		return matchResult, nil
+	}
+
+	if output == nil {
+		output = &OpaOutput{}
 	}
 
 	compiler, err := ast.CompileModules(map[string]string{
 		"validate.rego": regoPolicy,
 	})
 	if err != nil {
-		log.Fatal(err)
+		message.Debugf("failed to compile rego policy: %s", err.Error())
 		return matchResult, fmt.Errorf("failed to compile rego policy: %w", err)
 	}
 

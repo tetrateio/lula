@@ -12,7 +12,6 @@ import (
 	"github.com/defenseunicorns/go-oscal/src/pkg/versioning"
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/cmd/validate"
-	"github.com/defenseunicorns/lula/src/pkg/common"
 	"github.com/defenseunicorns/lula/src/pkg/common/oscal"
 	"github.com/defenseunicorns/lula/src/pkg/message"
 	"github.com/defenseunicorns/lula/src/test/util"
@@ -102,7 +101,39 @@ func TestPodLabelValidation(t *testing.T) {
 			return ctx
 		}).Feature()
 
-	testEnv.Test(t, featureTrueValidation, featureFalseValidation)
+	featureBadValidation := features.New("Check Graceful Failure - all not-satisfied without error").
+		Setup(func(ctx context.Context, t *testing.T, config *envconf.Config) context.Context {
+			pod, err := util.GetPod("./scenarios/pod-label/pod.pass.yaml")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = config.Client().Resources().Create(ctx, pod); err != nil {
+				t.Fatal(err)
+			}
+			err = wait.For(conditions.New(config.Client().Resources()).PodConditionMatch(pod, corev1.PodReady, corev1.ConditionTrue), wait.WithTimeout(time.Minute*5))
+			if err != nil {
+				t.Fatal(err)
+			}
+			return context.WithValue(ctx, "test-pod-label", pod)
+		}).
+		Assess("All not-satisfied", func(ctx context.Context, t *testing.T, config *envconf.Config) context.Context {
+			oscalPath := "./scenarios/pod-label/oscal-component-all-bad.yaml"
+			return validatePodLabelFail(ctx, t, config, oscalPath)
+		}).
+		Teardown(func(ctx context.Context, t *testing.T, config *envconf.Config) context.Context {
+			pod := ctx.Value("test-pod-label").(*corev1.Pod)
+			if err := config.Client().Resources().Delete(ctx, pod); err != nil {
+				t.Fatal(err)
+			}
+			err := wait.For(conditions.New(config.Client().Resources()).ResourceDeleted(pod), wait.WithTimeout(time.Minute*1))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			return ctx
+		}).Feature()
+
+	testEnv.Test(t, featureTrueValidation, featureFalseValidation, featureBadValidation)
 }
 
 func validatePodLabelPass(ctx context.Context, t *testing.T, config *envconf.Config, oscalPath string) context.Context {
@@ -150,7 +181,7 @@ func validatePodLabelPass(ctx context.Context, t *testing.T, config *envconf.Con
 	}
 
 	// Write the component definition to file
-	err = common.WriteFile("sar-test.yaml", &model)
+	err = oscal.WriteOscalModel("sar-test.yaml", &model)
 	if err != nil {
 		message.Fatalf(err, "error writing component to file")
 	}
@@ -167,7 +198,7 @@ func validatePodLabelPass(ctx context.Context, t *testing.T, config *envconf.Con
 	}
 
 	// Write the component definition to file
-	err = common.WriteFile("sar-test.yaml", &model)
+	err = oscal.WriteOscalModel("sar-test.yaml", &model)
 	if err != nil {
 		message.Fatalf(err, "error writing component to file")
 	}

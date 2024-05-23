@@ -18,10 +18,10 @@ import (
 
 // Data structures for ingesting validation data
 type Validation struct {
-	LulaVersion string   `json:"lula-version" yaml:"lula-version"`
-	Metadata    Metadata `json:"metadata" yaml:"metadata"`
-	Provider    Provider `json:"provider" yaml:"provider"`
-	Domain      Domain   `json:"domain" yaml:"domain"`
+	LulaVersion string    `json:"lula-version" yaml:"lula-version"`
+	Metadata    *Metadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	Provider    *Provider `json:"provider,omitempty" yaml:"provider,omitempty"`
+	Domain      *Domain   `json:"domain,omitempty" yaml:"domain,omitempty"`
 }
 
 // UnmarshalYaml is a convenience method to unmarshal a Validation object from a YAML byte array
@@ -58,15 +58,15 @@ type Metadata struct {
 }
 
 type Domain struct {
-	Type           string              `json:"type" yaml:"type"`
-	KubernetesSpec kube.KubernetesSpec `json:"kubernetes-spec" yaml:"kubernetes-spec"`
-	ApiSpec        api.ApiSpec         `json:"api-spec" yaml:"api-spec"`
+	Type           string               `json:"type" yaml:"type"`
+	KubernetesSpec *kube.KubernetesSpec `json:"kubernetes-spec,omitempty" yaml:"kubernetes-spec,omitempty"`
+	ApiSpec        *api.ApiSpec         `json:"api-spec,omitempty" yaml:"api-spec,omitempty"`
 }
 
 type Provider struct {
-	Type        string              `json:"type" yaml:"type"`
-	OpaSpec     opa.OpaSpec         `json:"opa-spec" yaml:"opa-spec"`
-	KyvernoSpec kyverno.KyvernoSpec `json:"kyverno-spec" yaml:"kyverno-spec"`
+	Type        string               `json:"type" yaml:"type"`
+	OpaSpec     *opa.OpaSpec         `json:"opa-spec,omitempty" yaml:"opa-spec,omitempty"`
+	KyvernoSpec *kyverno.KyvernoSpec `json:"kyverno-spec,omitempty" yaml:"kyverno-spec,omitempty"`
 }
 
 // ToLulaValidation converts a Validation object to a LulaValidation object
@@ -79,6 +79,13 @@ func (validation *Validation) ToLulaValidation() (lulaValidation types.LulaValid
 		versionConstraint = validation.LulaVersion
 	}
 
+	if validation.Domain == nil {
+		return lulaValidation, fmt.Errorf("required domain is nil")
+	}
+	if validation.Provider == nil {
+		return lulaValidation, fmt.Errorf("required provider is nil")
+	}
+
 	validVersion, versionErr := IsVersionValid(versionConstraint, currentVersion)
 	if versionErr != nil {
 		return lulaValidation, fmt.Errorf("version error: %s", versionErr.Error())
@@ -89,14 +96,17 @@ func (validation *Validation) ToLulaValidation() (lulaValidation types.LulaValid
 	// Construct the lulaValidation object
 	// TODO: Is there a better location for context?
 	ctx := context.Background()
-	lulaValidation.Provider = GetProvider(validation.Provider, ctx)
-	if lulaValidation.Provider == nil {
+	provider := GetProvider(validation.Provider, ctx)
+	if provider == nil {
 		return lulaValidation, fmt.Errorf("provider %s not found", validation.Provider.Type)
 	}
-	lulaValidation.Domain = GetDomain(validation.Domain, ctx)
-	if lulaValidation.Domain == nil {
+	lulaValidation.Provider = &provider
+
+	domain := GetDomain(validation.Domain, ctx)
+	if domain == nil {
 		return lulaValidation, fmt.Errorf("domain %s not found", validation.Domain.Type)
 	}
+	lulaValidation.Domain = &domain
 
 	lulaValidation.LulaValidationType = types.DefaultLulaValidationType // TODO: define workflow/purpose for this
 

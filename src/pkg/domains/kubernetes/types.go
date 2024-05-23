@@ -12,18 +12,20 @@ type KubernetesDomain struct {
 	Context context.Context `json:"context" yaml:"context"`
 
 	// Spec is the specification of the Kubernetes resources
-	Spec KubernetesSpec `json:"spec" yaml:"spec"`
+	Spec *KubernetesSpec `json:"spec,omitempty" yaml:"spec,omitempty"`
 }
 
 func (k KubernetesDomain) GetResources() (types.DomainResources, error) {
 	var resources types.DomainResources
 
-	err := EvaluateWait(k.Spec.Wait)
-	if err != nil {
-		return nil, err
+	if k.Spec.Wait != nil {
+		err := EvaluateWait(*k.Spec.Wait)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	resources, err = QueryCluster(k.Context, k.Spec.Resources)
+	resources, err := QueryCluster(k.Context, k.Spec.Resources)
 	if err != nil {
 		return nil, err
 	}
@@ -33,13 +35,13 @@ func (k KubernetesDomain) GetResources() (types.DomainResources, error) {
 
 type KubernetesSpec struct {
 	Resources []Resource `json:"resources" yaml:"resources"`
-	Wait      Wait       `json:"wait" yaml:"wait"`
+	Wait      *Wait      `json:"wait,omitempty" yaml:"wait,omitempty"`
 }
 
 type Resource struct {
-	Name         string       `json:"name" yaml:"name"`
-	Description  string       `json:"description" yaml:"description"`
-	ResourceRule ResourceRule `json:"resource-rule" yaml:"resource-rule"`
+	Name         string        `json:"name" yaml:"name"`
+	Description  string        `json:"description" yaml:"description"`
+	ResourceRule *ResourceRule `json:"resource-rule,omitempty" yaml:"resource-rule,omitempty"`
 }
 
 type ResourceRule struct {
@@ -48,7 +50,7 @@ type ResourceRule struct {
 	Version    string   `json:"version" yaml:"version"`
 	Resource   string   `json:"resource" yaml:"resource"`
 	Namespaces []string `json:"namespaces" yaml:"namespaces"`
-	Field      Field    `json:"field" yaml:"field"`
+	Field      *Field   `json:"field,omitempty" yaml:"field,omitempty"`
 }
 
 type FieldType string

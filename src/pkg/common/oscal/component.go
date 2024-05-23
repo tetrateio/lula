@@ -1,7 +1,6 @@
 package oscal
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -27,36 +26,20 @@ type parameter struct {
 
 // NewOscalComponentDefinition consumes a byte array and returns a new single OscalComponentDefinitionModel object
 // Standard use is to read a file from the filesystem and pass the []byte to this function
-func NewOscalComponentDefinition(source string, data []byte) (componentDefinition *oscalTypes_1_1_2.ComponentDefinition, err error) {
+func NewOscalComponentDefinition(data []byte) (componentDefinition *oscalTypes_1_1_2.ComponentDefinition, err error) {
 	var oscalModels oscalTypes_1_1_2.OscalModels
 
-	if strings.HasSuffix(source, ".yaml") {
-		err = yaml.Unmarshal(data, &oscalModels)
-		if err != nil {
-			message.Debugf("Error marshalling yaml: %s\n", err.Error())
-			return componentDefinition, err
-		}
-	} else if strings.HasSuffix(source, ".json") {
-		err = json.Unmarshal(data, &oscalModels)
-		if err != nil {
-			message.Debugf("Error marshalling json: %s\n", err.Error())
-			return componentDefinition, err
-		}
-	} else {
-		return componentDefinition, fmt.Errorf("unsupported file type: %s", source)
+	// validate the data
+	err = multiModelValidate(data)
+	if err != nil {
+		return componentDefinition, err
 	}
 
-	return oscalModels.ComponentDefinition, nil
-}
-
-// NewOscalComponentDefinitionFromBytes consumes a byte array and returns a new single OscalComponentDefinitionModel object
-func NewOscalComponentDefinitionFromBytes(data []byte) (componentDefinition oscalTypes_1_1_2.ComponentDefinition, err error) {
-	var oscalModels oscalTypes_1_1_2.OscalModels
 	err = yaml.Unmarshal(data, &oscalModels)
 	if err != nil {
 		return componentDefinition, err
 	}
-	return *oscalModels.ComponentDefinition, nil
+	return oscalModels.ComponentDefinition, nil
 }
 
 // This function should perform a merge of two component-definitions where maintaining the original component-definition is the primary concern.
@@ -86,7 +69,7 @@ func MergeComponentDefinitions(original *oscalTypes_1_1_2.ComponentDefinition, l
 	for key, value := range latestMap {
 		if comp, ok := originalMap[key]; ok {
 			// if the component exists - merge & append
-			comp = mergeComponents(comp, value)
+			comp = *mergeComponents(&comp, &value)
 			tempItems = append(tempItems, comp)
 			delete(originalMap, key)
 		} else {
@@ -118,24 +101,28 @@ func MergeComponentDefinitions(original *oscalTypes_1_1_2.ComponentDefinition, l
 
 }
 
-func mergeComponents(original oscalTypes_1_1_2.DefinedComponent, latest oscalTypes_1_1_2.DefinedComponent) oscalTypes_1_1_2.DefinedComponent {
+func mergeComponents(original *oscalTypes_1_1_2.DefinedComponent, latest *oscalTypes_1_1_2.DefinedComponent) *oscalTypes_1_1_2.DefinedComponent {
 	originalMap := make(map[string]oscalTypes_1_1_2.ControlImplementationSet)
 
-	for _, item := range *original.ControlImplementations {
-		originalMap[item.Source] = item
+	if original.ControlImplementations != nil {
+		for _, item := range *original.ControlImplementations {
+			originalMap[item.Source] = item
+		}
 	}
 
 	latestMap := make(map[string]oscalTypes_1_1_2.ControlImplementationSet)
 
-	for _, item := range *latest.ControlImplementations {
-		latestMap[item.Source] = item
+	if latest.ControlImplementations != nil {
+		for _, item := range *latest.ControlImplementations {
+			latestMap[item.Source] = item
+		}
 	}
 
 	tempItems := make([]oscalTypes_1_1_2.ControlImplementationSet, 0)
 	for key, value := range latestMap {
 		if orig, ok := originalMap[key]; ok {
 			// if the control implementation exists - merge & append
-			orig = mergeControlImplementations(orig, value)
+			orig = *mergeControlImplementations(&orig, &value)
 			tempItems = append(tempItems, orig)
 			delete(originalMap, key)
 		} else {
@@ -152,17 +139,22 @@ func mergeComponents(original oscalTypes_1_1_2.DefinedComponent, latest oscalTyp
 	return original
 }
 
-func mergeControlImplementations(original oscalTypes_1_1_2.ControlImplementationSet, latest oscalTypes_1_1_2.ControlImplementationSet) oscalTypes_1_1_2.ControlImplementationSet {
+func mergeControlImplementations(original *oscalTypes_1_1_2.ControlImplementationSet, latest *oscalTypes_1_1_2.ControlImplementationSet) *oscalTypes_1_1_2.ControlImplementationSet {
 	originalMap := make(map[string]oscalTypes_1_1_2.ImplementedRequirementControlImplementation)
 
-	for _, item := range original.ImplementedRequirements {
-		originalMap[item.ControlId] = item
+	if original.ImplementedRequirements != nil {
+		for _, item := range original.ImplementedRequirements {
+			originalMap[item.ControlId] = item
+		}
 	}
 	latestMap := make(map[string]oscalTypes_1_1_2.ImplementedRequirementControlImplementation)
 
-	for _, item := range latest.ImplementedRequirements {
-		latestMap[item.ControlId] = item
+	if latest.ImplementedRequirements != nil {
+		for _, item := range latest.ImplementedRequirements {
+			latestMap[item.ControlId] = item
+		}
 	}
+
 	tempItems := make([]oscalTypes_1_1_2.ImplementedRequirementControlImplementation, 0)
 	for key, latestImp := range latestMap {
 		if orig, ok := originalMap[key]; ok {
@@ -243,7 +235,7 @@ func mergeLinks(orig []oscalTypes_1_1_2.Link, latest []oscalTypes_1_1_2.Link) *[
 }
 
 // Creates a component-definition from a catalog and identified (or all) controls. Allows for specification of what the content of the remarks section should contain.
-func ComponentFromCatalog(source string, catalog oscalTypes_1_1_2.Catalog, componentTitle string, targetControls []string, targetRemarks []string) (*oscalTypes_1_1_2.ComponentDefinition, error) {
+func ComponentFromCatalog(source string, catalog *oscalTypes_1_1_2.Catalog, componentTitle string, targetControls []string, targetRemarks []string) (*oscalTypes_1_1_2.ComponentDefinition, error) {
 	// store all of the implemented requirements
 	implmentedRequirements := make([]oscalTypes_1_1_2.ImplementedRequirementControlImplementation, 0)
 	var componentDefinition = &oscalTypes_1_1_2.ComponentDefinition{}
@@ -269,7 +261,7 @@ func ComponentFromCatalog(source string, catalog oscalTypes_1_1_2.Catalog, compo
 		}
 		for _, control := range *group.Controls {
 			if _, ok := controlMap[control.ID]; ok {
-				newRequirement, err := ControlToImplementedRequirement(control, targetRemarks)
+				newRequirement, err := ControlToImplementedRequirement(&control, targetRemarks)
 				if err != nil {
 					return componentDefinition, err
 				}
@@ -280,7 +272,7 @@ func ComponentFromCatalog(source string, catalog oscalTypes_1_1_2.Catalog, compo
 			if control.Controls != nil {
 				for _, subControl := range *control.Controls {
 					if _, ok := controlMap[subControl.ID]; ok {
-						newRequirement, err := ControlToImplementedRequirement(subControl, targetRemarks)
+						newRequirement, err := ControlToImplementedRequirement(&subControl, targetRemarks)
 						if err != nil {
 							return componentDefinition, err
 						}
@@ -333,10 +325,13 @@ func ComponentFromCatalog(source string, catalog oscalTypes_1_1_2.Catalog, compo
 }
 
 // Consume a control - Identify statements - iterate through parts in order to create a description
-func ControlToImplementedRequirement(control oscalTypes_1_1_2.Control, targetRemarks []string) (implementedRequirement oscalTypes_1_1_2.ImplementedRequirementControlImplementation, err error) {
-
+func ControlToImplementedRequirement(control *oscalTypes_1_1_2.Control, targetRemarks []string) (implementedRequirement oscalTypes_1_1_2.ImplementedRequirementControlImplementation, err error) {
 	var controlDescription string
 	paramMap := make(map[string]parameter)
+
+	if control == nil {
+		return implementedRequirement, fmt.Errorf("control is nil")
+	}
 
 	if control.Params != nil {
 		for _, param := range *control.Params {

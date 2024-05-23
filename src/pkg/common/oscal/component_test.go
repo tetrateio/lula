@@ -80,13 +80,11 @@ func TestNewOscalComponentDefinition(t *testing.T) {
 	tests := []struct {
 		name    string
 		data    []byte
-		source  string
 		want    *oscalTypes.ComponentDefinition
 		wantErr bool
 	}{
 		{
 			name:    "Valid OSCAL Component Definition",
-			source:  "test.yaml",
 			data:    validBytes,
 			want:    validWantSchema.ComponentDefinition,
 			wantErr: false,
@@ -94,19 +92,17 @@ func TestNewOscalComponentDefinition(t *testing.T) {
 		{
 			name:    "Invalid OSCAL Component Definition",
 			data:    invalidBytes,
-			source:  "",
 			wantErr: true,
 		},
 		{
 			name:    "Invalid OSCAL source with valid data",
 			data:    validBytes,
-			source:  "test.go",
-			wantErr: true,
+			want:    validWantSchema.ComponentDefinition,
+			wantErr: false,
 		},
 		{
 			name:    "Empty Data",
 			data:    []byte{},
-			source:  "",
 			wantErr: true,
 		},
 		// Additional test cases can be added here
@@ -114,7 +110,7 @@ func TestNewOscalComponentDefinition(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := oscal.NewOscalComponentDefinition(tt.source, tt.data)
+			got, err := oscal.NewOscalComponentDefinition(tt.data)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewOscalComponentDefinition() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -136,7 +132,7 @@ func TestComponentFromCatalog(t *testing.T) {
 	// let's create a catalog from a test document
 	catalogBytes := loadTestData(t, catalogPath)
 
-	catalog, err := oscal.NewCatalog("https://raw.githubusercontent.com/usnistgov/oscal-content/master/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json", catalogBytes)
+	catalog, err := oscal.NewCatalog(catalogBytes)
 	if err != nil {
 		t.Errorf("error creating catalog from path %s", catalogPath)
 	}
@@ -154,7 +150,7 @@ func TestComponentFromCatalog(t *testing.T) {
 	}{
 		{
 			name:         "Valid test of component from Catalog",
-			data:         catalog,
+			data:         *catalog,
 			title:        "Component Title",
 			requirements: []string{"ac-1", "ac-3", "ac-3.2", "ac-4"},
 			remarks:      []string{"statement"},
@@ -164,7 +160,7 @@ func TestComponentFromCatalog(t *testing.T) {
 		},
 		{
 			name:         "Valid test of component from Catalog with malformed control",
-			data:         catalog,
+			data:         *catalog,
 			title:        "Component Title",
 			requirements: []string{"ac-1", "ac-3", "ac-3.2", "ac-4", "100"},
 			remarks:      []string{"statement"},
@@ -174,7 +170,7 @@ func TestComponentFromCatalog(t *testing.T) {
 		},
 		{
 			name:         "Invalid amount of requirements specified",
-			data:         catalog,
+			data:         *catalog,
 			title:        "Component Test Title",
 			requirements: []string{},
 			remarks:      []string{"statement"},
@@ -189,7 +185,7 @@ func TestComponentFromCatalog(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := oscal.ComponentFromCatalog(tt.source, tt.data, tt.title, tt.requirements, tt.remarks)
+			got, err := oscal.ComponentFromCatalog(tt.source, &tt.data, tt.title, tt.requirements, tt.remarks)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ComponentFromCatalog() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -228,7 +224,7 @@ func TestMergeComponentDefinitions(t *testing.T) {
 	// generate a new artifact
 	catalogBytes := loadTestData(t, catalogPath)
 	source := "https://raw.githubusercontent.com/usnistgov/oscal-content/master/nist.gov/SP800-53/rev5/json/NIST_SP-800-53_rev5_catalog.json"
-	catalog, err := oscal.NewCatalog(source, catalogBytes)
+	catalog, err := oscal.NewCatalog(catalogBytes)
 	if err != nil {
 		t.Errorf("error creating catalog from path %s", catalogPath)
 	}
@@ -293,7 +289,7 @@ func TestMergeComponentDefinitions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			validComponent, _ := oscal.NewOscalComponentDefinition("valid-generated-component.yaml", validBytes)
+			validComponent, _ := oscal.NewOscalComponentDefinition(validBytes)
 
 			// Get the implemented requirements from existing for comparison
 			existingComponent := (*validComponent.Components)[0]
