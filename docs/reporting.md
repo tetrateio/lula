@@ -11,7 +11,7 @@ flowchart TD
     A[Report] -->|default/specified OSCAL files| B(Build Report)
     B --> C{Check for existence of models & Catalog/Profile}
     C -->|Components Exist| D[Component Report]
-    C -->|SSP Exists (not supported)| E[System Report]
+    C -->|SSP Exists - not supported| E[System Report]
     C -->|Assessment Results Exist| F[Assessment Report]
 ```
 
