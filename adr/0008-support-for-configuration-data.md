@@ -17,10 +17,13 @@ Each of these possible operations may require a distinct input `configuration` f
 
 ### Details on use cases
 
-#### Template constants, e.g., namespaces in a domain, kubernetes-spec
-Happens at build-time, this can be `composed` into the oscal
+#### Build-time template of constants
 
-E.g., templating namespaces, names, rego values to check:
+Addition of system-specific values that are not secrets, but just items that might be changing between system design iterations.
+
+Templating should happen at build-time, i.e., when the component-definition is `composed`
+
+Example: Lula Validation templating namespaces, names, rego values:
 ```yaml
 metadata:
   name: istio-metrics-logging-configured
@@ -33,9 +36,9 @@ domain:
       resource-rule:
         resource: configmaps
         namespaces:
-        - "###ZARF_CONST_ISTIO_NAMESPACE###"
+        - "###LULA_CONST_ISTIO_NAMESPACE###"
         version: v1
-        name: "###ZARF_CONST_ISTIO_CONFIG_NAME###"
+        name: "###LULA_CONST_ISTIO_CONFIG_NAME###"
         field:
           jsonpath: .data.mesh
           type: yaml
@@ -57,7 +60,7 @@ provider:
       msg = check_metrics_enabled.msg
 
       check_metrics_enabled = { "result": false, "msg": msg } if {
-        input.istioConfig.###ZARF_CONST_ISTIO_PROMETHEUS_MERGE### == false
+        input.istioConfig.###LULA_CONST_ISTIO_PROMETHEUS_MERGE### == false
         msg := "Metrics logging not supported."
       } else = { "result": true, "msg": msg } if {
         msg := "Metrics logging supported."
@@ -68,10 +71,13 @@ provider:
       - validate.msg
 ```
 
-#### Template secrets, e.g., API Keys
-Happens at run-time, this is dependant on the environment, possibly an output of some other process therein...
+#### Run-time template of variables
 
--> Would you have to create a custom user/API key for a given application, e.g., Keycloak?
+Addition of deployment-specific variables that are subject to change across deployments of a system. 
+
+Templating should happen at run-time since these values are likely dependant on the environment and/or possibly an output of some other process therein.
+
+Example: Creating a custom user/API key for a given application, e.g., Keycloak
 
 ```bash
 #!/bin/bash
@@ -97,8 +103,11 @@ curl -X GET "${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/users/${USER_ID}" \
 -H "Authorization: Bearer $TKN" | jq .
 ```
 
-#### SSP Generation
-Some metadata:
+#### Lula OSCAL Generation
+
+Need to add additional information to OSCAL documents, in this use case specifically looking at SSP generation.
+
+We have some metadata which is constant/managed external to Lula:
 ```yaml
 metadata:
   title: "System Security Plan for UDS Core"
@@ -106,7 +115,7 @@ metadata:
   oscal-version: 1.1.2
 ```
 
-(auto-generated from component-definition)
+We have some auto-generated content, e.g., created from the component-definition model
 ```yaml
 system-security-plan:
   system-characteristics:
@@ -119,40 +128,42 @@ system-security-plan:
         title: Grafana
 ```
 
-`lula gen ssp -f <comma-separated-list-of-other-info-yaml> -f <component.yaml>`
--> This feels probably a bit more unique than a simple template of variables/secrets since you're merging entire maps
+## (Proposed) Decision
 
-I don't think this workflow is going to work because if you need to properly define an entire oscal model then you'll be overwriting data when doing the merge -_-
+Two separate Lula Config files for the OSCAL (`lula gen`) use cases vs. Validation configuration (`lula validate`) use cases
 
-### Options
-**Go Templating engine**
-This is manifested as {{ .whatever }} within the yaml. 
-Pro: It is versatile in that you can define a configuration yaml into any structure you want, and just reference that path in your template. 
-Con: Doesn't really support secrets or updating the variables.
+### Lula Generation
 
-**Viper**
-Library used for configuration of go applications.
-Pro: Proven in Zarf
-Con: Have to implement our own custom version, which will likely very closely align to Zarf...
-Also, probably need to do custom whatever to handle the yaml stuff
-
-**Zarf/UDS CLI**
-Can we just leverage their implementation instead of having to create and manage our own?
-Pro: we don't have to manage any of that and can leverage the existing tools to do so. basically if we're packaging up UDS Core as effectively a zarf package, we could include these settings as additional variables within that package config, then on "deploy" those get templated out into local?
-Con: requires Zarf and/or UDS Bundles to set-up/handle variable and constant injection. not a native Lula feature. requires `deploy` which can't really work without a cluster, so how does this extend to other non-k8s scenarios?
--> How would this work in BB? Would you create like a zarf package for bb then throw in the templated compliance stuff?
--> Also, what is the order of operations for creating a cluster, deploying an app, creating an API key to access app, templating that variable into the component-defn, running Lula validate -> feels like some of this happens after the `deploy` so how would templating work there?
-
-## Decision
+Define a configuration file that when provided to a `generate` command will inject some data into the specified OscalModelSchema jsonpath:
 
 ```yaml
-kind: LulaConfig
+kind: LulaOscalConfig
 
 # Map substitutions
 maps:
-  - name: some-map
-    parent-path: system-security-plan
-    file: ./ssp-metadata.yaml
+  - name: ssp-metadata
+    oscal-key: system-security-plan.metadata
+    file: ./metadata.yaml # file OR content specified
+    content: |
+      metadata:
+        title: "System Security Plan for UDS Core"
+        last-modified: 2024-07-22Z12:00:00
+        oscal-version: 1.1.2
+```
+
+Underlying libraries/implementation will be the k8s.io jsonpath module and map merge functions to identify the oscal-key from the OscalModelSchema and inject the contents of `file` or `content` into the schema. Ideally this will manifest as such:
+
+```bash
+lula gen ssp --config config-file.yaml --component component-defintion.yaml
+```
+where the gen ssp uses the component-definition to generate the auto-portions and reads from the map substitutions in `LulaOscalConfig` to inject relevant data where specified.
+
+### Variable substitution
+
+Define a configuration file that when provided to a `validate` (or `compose` or `assess`) command will configure a viper engine to substitute the data:
+
+```yaml
+kind: LulaValidationConfig
 
 # Constants substition - gets subbed during composition
 constants:
@@ -164,5 +175,7 @@ variables:
   - name: ...
     value: ...
 ```
+
+The `constants` are subbed at build-time, whereas the `variables` are subbed during the runtime processes.
 
 ## Consequences
