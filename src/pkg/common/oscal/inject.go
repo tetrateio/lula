@@ -2,22 +2,42 @@ package oscal
 
 import (
 	"fmt"
+	"strings"
 
-	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
-	"k8s.io/client-go/util/jsonpath"
+	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 // InjectJSONPathValues injects values into an OSCAL model using JSONPath
-func InjectJSONPathValues(model *oscalTypes_1_1_2.OscalModels, path string, values map[string]interface{}) error {
-	jp := getJsonPath(path)
-	if jp == nil {
-		return fmt.Errorf("failed to create jsonpath from %s", path)
+func InjectJSONPathValues(model map[string]interface{}, path string, values map[string]interface{}) error {
+	// Right node is the model
+	// Left node is an empty oscalTypes_1_1_2.OscalModels with the values injected at the path specified
+	// Merge the two nodes, that becomes model
+
+	modelNode, err := yaml.FromMap(model)
+	if err != nil {
+		return fmt.Errorf("failed to create left node from values: %v", err)
 	}
-	jp.Execute(model, values) // this isn't right.
+
+	valuesNode, err := yaml.FromMap(values)
+	if err != nil {
+		return fmt.Errorf("failed to create left node from values: %v", err)
+	}
+	fmt.Printf("valuesNode kind: %v\n", valuesNode.GetKind())
+
+	injectionNode, err := modelNode.Pipe(yaml.Lookup(splitPath(path)...))
+	if err != nil {
+		return fmt.Errorf("failed to find path %s in model: %v", path, err)
+	}
+	fmt.Printf("injectionNode kind: %v\n", injectionNode.GetKind())
+
+	// merge3.Merge(injectionNode, valuesNode, mergedNode)
+
+	// merge lNode into injectionNode -> put injectionNode back into rNode?
+
 	return nil
 }
 
-// getJsonPath returns the jsonpath from a string
-func getJsonPath(path string) *jsonpath.JSONPath {
-	return jsonpath.New(path)
+// splitPath splits a path by '.' into a path array - is there a lib function to do this and possibly handle things like [] or escaped '.'
+func splitPath(path string) []string {
+	return strings.Split(path, ".")
 }
