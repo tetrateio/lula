@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"sigs.k8s.io/kustomize/kyaml/yaml"
+	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 )
 
 // InjectJSONPathValues injects values into an OSCAL model using JSONPath
@@ -30,8 +31,17 @@ func InjectJSONPathValues(model map[string]interface{}, path string, values map[
 	}
 	fmt.Printf("injectionNode kind: %v\n", injectionNode.GetKind())
 
-	// merge3.Merge(injectionNode, valuesNode, mergedNode)
+	newNode, err := merge2.Merge(injectionNode, valuesNode, yaml.MergeOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to merge values into model: %v", err)
+	}
 
+	// write newNode into map[string]interface{}
+	newMap, err := newNode.Map()
+	if err != nil {
+		return fmt.Errorf("failed to convert merged node to map: %v", err)
+	}
+	fmt.Printf("newMap: %v\n", newMap)
 	// merge lNode into injectionNode -> put injectionNode back into rNode?
 
 	return nil
