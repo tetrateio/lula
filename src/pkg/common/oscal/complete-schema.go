@@ -168,3 +168,5 @@ func GetOscalModel(model *oscalTypes_1_1_2.OscalModels) (modelType string, err e
 	}
 
 }
+
+// InjectOSCALValues takes a model and a map of values to inject into the model
