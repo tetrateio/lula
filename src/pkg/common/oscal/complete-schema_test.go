@@ -1,10 +1,9 @@
 package oscal_test
 
 import (
-	"testing"
-
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/pkg/common/oscal"
+	"testing"
 )
 
 func TestGetOscalModel(t *testing.T) {
