@@ -69,4 +69,5 @@ func TestGetOscalModel(t *testing.T) {
 			t.Fatalf("error GetOscalModel: expected: %s | got: %s", expected, actual)
 		}
 	}
+
 }
