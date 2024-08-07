@@ -15,15 +15,39 @@ There is an identified need to pull in extra information into various artifacts 
 
 Each of these possible operations may require a distinct input `configuration` file that provides the data, however it is desirable that the underlying libraries and methods support all these possible use cases.
 
-### Details on use cases
+### Detailed Use Case Exploration
 
-#### Build-time template of constants
+1. User wants to have composed OSCAL model, but keep configuration separate, templated at run-time
+
+  -> Validation config is added as a separate back-matter artifact, and extracted from the back-matter when validating. (how do you merge multiple, which get precedence?)
+
+2. User wants to have composed OSCAL model, WITH validations templated at compose time 
+  
+  -> Validation config is NOT added in the back-matter
+
+>[!NOTE] I think you do want to support both - the first use case is probably where the "composed" file is taken to different locations, where you don't want to have to port around all the individual validations but may need to operate on them and want the config still broken out. The second use case is more relevant to the "composed" file being an artifact of the `lula validate` command, where you'd want that file to possibly evaluate after the run (thinking in CI scenario)
+
+3. Environment variables are going to be templated values.
+
+  -> We can't pull this in as config, need to identify the environment variables specifically as something that should be injected at runtime (`lula validate`). These aren't secrets, so could be added in a `composed` component-definition that is provided as an artifact of the `lula validate` command.
+
+4. Secrets are going to be templated values.
+
+  -> This is trickier... they'd probably be injected the same way as environment variables, but would need to be obfuscated in the OSCAL artifact.
+
+5. User wants to have a templated OSCAL model, e.g., some links may be templated if root path changes
+
+6. OSCAL is created based on the aggregation of different information, e.g., a partial SSP and externally sourced metadata.
+
+7. Validation configuration values can be --set at the command line, e.g., `lula validate -f ./component-definition.yaml --set .some-value=abc123`
+
+  -> In `dev validate` this should support .env and .secret values as well, since those most likely will need to be mocked out for testing.
+
+#### Use Cases 1 & 2: Sample Lula Validation and associated config that could be templated at build-time
 
 Addition of system-specific values that are not secrets, but just items that might be changing between system design iterations.
 
-Templating should happen at build-time, i.e., when the component-definition is `composed`
-
-Example: Lula Validation templating namespaces, names, rego values:
+Validation with template values, currently structured in go-template syntax:
 ```yaml
 metadata:
   name: istio-metrics-logging-configured
@@ -36,9 +60,9 @@ domain:
       resource-rule:
         resource: configmaps
         namespaces:
-        - "###LULA_CONST_ISTIO_NAMESPACE###"
+        - "{{ .istio.namespace }}"
         version: v1
-        name: "###LULA_CONST_ISTIO_CONFIG_NAME###"
+        name: "{{ .istio.config-name }}"
         field:
           jsonpath: .data.mesh
           type: yaml
@@ -60,7 +84,7 @@ provider:
       msg = check_metrics_enabled.msg
 
       check_metrics_enabled = { "result": false, "msg": msg } if {
-        input.istioConfig.###LULA_CONST_ISTIO_PROMETHEUS_MERGE### == false
+        input.istioConfig.{{ .istio.prometheus-merge }} == false
         msg := "Metrics logging not supported."
       } else = { "result": true, "msg": msg } if {
         msg := "Metrics logging supported."
@@ -71,39 +95,72 @@ provider:
       - validate.msg
 ```
 
-#### Run-time template of variables
+Validation configuration file (variable schema, based on how it's called in the go-template syntax):
+```yaml
+istio:
+  namespace: istio-system
+  config-name: istio-config
+  prometheus-merge: enablePrometheusMerge
+```
+^^ This is assuming we are using go-template under the hood. A different, more regid structure might be needed if a different templating method is used.
+
+With a component definition that links the above validation, run:
+```shell
+lula t compose -f ./component-definition.yaml --config ./my-config.yaml
+```
+
+This adds the templated validation to the `back-matter` of the composed component-definition OR templates the validation and omits the config from the back-matter.
+
+#### Use Case 3 & 4: Run-time template of variables
 
 Addition of deployment-specific variables that are subject to change across deployments of a system. 
 
 Templating should happen at run-time since these values are likely dependant on the environment and/or possibly an output of some other process therein.
 
-Example: Creating a custom user/API key for a given application, e.g., Keycloak
+Example: Creating a custom host/API token for a given application, e.g., Keycloak
+```yaml
+metadata:
+  name: check-keycloak-api
+  uuid: bf0aeb97-6e37-4bf4-b976-5f6af6fa81a3
+domain:
+  type: api
+  api-spec:
+    name: keycloakAdmin
+    endpoint: http://{{ .env.KEYCLOAK_HOST }}:8080/auth/admin/realms/master
+    method: GET
+    headers:
+      Authorization: Bearer {{ .secret.KEYCLOAK_TOKEN }}
+provider:
+  type: opa
+  opa-spec:
+    rego: |
+      package validate
+      import rego.v1
 
-```bash
-#!/bin/bash
-
-# requires https://stedolan.github.io/jq/download/
-
-# config
-KEYCLOAK_URL=http://localhost:8080/auth
-KEYCLOAK_REALM=realm
-KEYCLOAK_CLIENT_ID=clientId
-KEYCLOAK_CLIENT_SECRET=clientSecret
-USER_ID=userId
-
-export TKN=$(curl -X POST "${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token" \
- -H "Content-Type: application/x-www-form-urlencoded" \
- -d "username=${KEYCLOAK_CLIENT_ID}" \
- -d "password=${KEYCLOAK_CLIENT_SECRET}" \
- -d 'grant_type=password' \
- -d 'client_id=admin-cli' | jq -r '.access_token')
-
-curl -X GET "${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/users/${USER_ID}" \
--H "Accept: application/json" \
--H "Authorization: Bearer $TKN" | jq .
+      # Some validation logic here...
 ```
 
-#### Lula OSCAL Generation
+Here, no config is required, the `env` and `secret` values are provided by the environment. The .env values are persisted in the OSCAL artifact, while the .secret values are not. (somehow?)
+
+#### Use Case 5: Template of OSCAL data
+
+Aside from templating entire sections of OSCAL, maybe some overrides with respect to a linked path might be needed:
+
+```yaml
+component-definition:
+  components:
+    - # ... list of components
+      control-implementations:
+        - # ... list of control implementations
+          implemented-requirements:
+            - # ... list of implemented requirements
+              links:
+                - href: '{{ .rootUrl }}/validations/istio/healthcheck/validation.yaml'
+                  rel: lula
+                  text: Check that Istio is healthy
+```
+
+#### Use Case 6: Lula OSCAL Generation
 
 Need to add additional information to OSCAL documents, in this use case specifically looking at SSP generation.
 
@@ -130,7 +187,7 @@ system-security-plan:
 
 ## (Proposed) Decision
 
-Two separate Lula Config files for the OSCAL (`lula gen`) use cases vs. Validation configuration (`lula validate`) use cases
+Two separate Lula Config files for the OSCAL (`lula gen`) use cases vs. Validation configuration (`lula validate`/`lula t compose`) use cases
 
 ### Lula Generation
 
@@ -145,13 +202,12 @@ maps:
     oscal-key: system-security-plan.metadata
     file: ./metadata.yaml # file OR content specified
     content: |
-      metadata:
-        title: "System Security Plan for UDS Core"
-        last-modified: 2024-07-22Z12:00:00
-        oscal-version: 1.1.2
+      title: "System Security Plan for UDS Core"
+      last-modified: 2024-07-22Z12:00:00
+      oscal-version: 1.1.2
 ```
 
-Underlying libraries/implementation will be the k8s.io jsonpath module and map merge functions to identify the oscal-key from the OscalModelSchema and inject the contents of `file` or `content` into the schema. Ideally this will manifest as such:
+Underlying libraries/implementation will be the k8s.io kustomization/kyaml module and map merge functions to identify the path given by `oscal-key` in the OscalModelSchema and inject the contents of `file` or `content` into the schema. Presumably this will manifest as:
 
 ```bash
 lula gen ssp --config config-file.yaml --component component-defintion.yaml
