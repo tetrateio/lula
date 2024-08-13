@@ -1,1 +1,5 @@
-log_level: trace
+log_level: debug
+
+variables:
+  pods:
+    resource: pods
