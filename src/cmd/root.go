@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/defenseunicorns/lula/src/cmd/common"
 	"github.com/defenseunicorns/lula/src/cmd/dev"
 	"github.com/defenseunicorns/lula/src/cmd/evaluate"
 	"github.com/defenseunicorns/lula/src/cmd/generate"
@@ -58,6 +59,9 @@ func Execute() {
 }
 
 func init() {
+
+	v := common.InitViper()
+
 	commands := []*cobra.Command{
 		validate.ValidateCommand(),
 		evaluate.EvaluateCommand(),
@@ -69,5 +73,5 @@ func init() {
 	version.Include(rootCmd)
 	dev.Include(rootCmd)
 
-	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", "info", "Log level when running Lula. Valid options are: warn, info, debug, trace")
+	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", v.GetString(common.VLogLevel), "Log level when running Lula. Valid options are: warn, info, debug, trace")
 }

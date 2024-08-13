@@ -7,6 +7,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	VLogLevel = "log_level"
+)
+
 var (
 	// Viper instance used by commands
 	v *viper.Viper
@@ -51,8 +55,8 @@ func InitViper() *viper.Viper {
 	// Optional, so ignore errors
 	vConfigError = v.ReadInConfig()
 
-	// // Set default values for viper
-	// setDefaults()
+	// Set default values for viper
+	setDefaults()
 
 	return v
 }
@@ -68,5 +72,22 @@ func isVersionCmd() bool {
 }
 
 func setDefaults() {
-
+	v.SetDefault(VLogLevel, "info")
 }
+
+// func printViperConfigUsed() {
+// 	// Only print config info if viper is initialized.
+// 	vInitialized := v != nil
+// 	if !vInitialized {
+// 		return
+// 	}
+// 	var notFoundErr viper.ConfigFileNotFoundError
+// 	if errors.As(vConfigError, &notFoundErr) {
+// 		return
+// 	}
+// 	if vConfigError != nil {
+// 		message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
+// 		return
+// 	}
+// 	message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
+// }
