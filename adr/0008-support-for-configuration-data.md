@@ -185,7 +185,7 @@ system-security-plan:
         title: Grafana
 ```
 
-## (Proposed) Decision
+## (Proposed) Decision 1
 
 Two separate Lula Config files for the OSCAL (`lula gen`) use cases vs. Validation configuration (`lula validate`/`lula t compose`) use cases
 
@@ -233,5 +233,68 @@ variables:
 ```
 
 The `constants` are subbed at build-time, whereas the `variables` are subbed during the runtime processes.
+
+## (Proposed) Decision 2
+
+Utilize [Viper](https://github.com/spf13/viper) as the single point-of-entry for all configuration definitions and consume the configuration for different purposes. 
+
+***Note:*** Lula likely requires Viper support for future utilization anyway. This proposal is to investigate whether this configuration data could be included through viper-native processes. 
+
+This proposal would allow for:
+- Native specification and merge (with precedence) of variables/configuration through config-file and environment variables
+- Central-control of variables independent of a single file (OSCAL/Validation) such that each does not require tight-coupling to an expected artifact
+- Variables that may be used by many validations can be centrally managed
+
+
+A `lula-config.yaml` - or other [format](https://github.com/spf13/viper?tab=readme-ov-file#reading-config-files) for which Viper natively supports - can provide support for many scenarios of interest.
+
+Adjusting Log Level in CLI runtime:
+```
+log_level : 'debug'
+```
+
+Applying variables to templated values:
+
+validation.yaml
+```yaml
+config:
+  variables:
+  - name: pod_label_resource
+    value: pods
+  - name: pod_label_namespace
+    value: validation-test      
+domain:
+  type: kubernetes
+  kubernetes-spec:
+    resources:
+    - name: podsvt 
+      resource-rule:   
+        group: 
+        version: v1
+        resource: {{ pod_label_resource }}
+        namespaces: [{{ pod_label_namespace }}] 
+provider: 
+  type: opa
+  opa-spec:
+    rego: |
+      package validate
+
+      import future.keywords.every
+
+      validate {
+        every pod in input.podsvt {
+          podLabel := pod.metadata.labels.foo
+          podLabel == "bar"
+        }
+      }
+```
+
+lula-config.yaml
+```yaml
+
+pod_label_resource: 'pods'
+pod_label_namespace: 'validation-test'
+
+```
 
 ## Consequences
