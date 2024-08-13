@@ -1,9 +1,11 @@
 package common
 
 import (
+	"errors"
 	"os"
 	"strings"
 
+	"github.com/defenseunicorns/lula/src/pkg/message"
 	"github.com/spf13/viper"
 )
 
@@ -75,19 +77,19 @@ func setDefaults() {
 	v.SetDefault(VLogLevel, "info")
 }
 
-// func printViperConfigUsed() {
-// 	// Only print config info if viper is initialized.
-// 	vInitialized := v != nil
-// 	if !vInitialized {
-// 		return
-// 	}
-// 	var notFoundErr viper.ConfigFileNotFoundError
-// 	if errors.As(vConfigError, &notFoundErr) {
-// 		return
-// 	}
-// 	if vConfigError != nil {
-// 		message.WarnErrf(vConfigError, lang.CmdViperErrLoadingConfigFile, vConfigError.Error())
-// 		return
-// 	}
-// 	message.Notef(lang.CmdViperInfoUsingConfigFile, v.ConfigFileUsed())
-// }
+func printViperConfigUsed() {
+	// Only print config info if viper is initialized.
+	vInitialized := v != nil
+	if !vInitialized {
+		return
+	}
+	var notFoundErr viper.ConfigFileNotFoundError
+	if errors.As(vConfigError, &notFoundErr) {
+		return
+	}
+	if vConfigError != nil {
+		message.WarnErrf(vConfigError, "failed to load config file: %s", vConfigError.Error())
+		return
+	}
+	message.Notef("Using config file %s", v.ConfigFileUsed())
+}
