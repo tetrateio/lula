@@ -27,3 +27,5 @@ variables:
       resource: services
       namespaces: [validation-test]
 
+secrets:
+  target: podsvt

@@ -19,7 +19,7 @@ provider:
       import future.keywords.every
 
       validate {
-        every pod in input.{{ .variables.target }} {
+        every pod in input.{{ .secrets.target }} {
           podLabel := pod.metadata.labels.foo
           podLabel == "bar"
         }

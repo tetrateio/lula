@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"regexp"
 	"strings"
 	"text/template"
 )
@@ -20,4 +21,36 @@ func ExecuteTemplate(data map[string]interface{}, templateString string) ([]byte
 	}
 
 	return []byte(buffer.String()), nil
+}
+
+func ReplaceDelimiters(input string) string {
+	// Define the regex pattern
+	pattern := `\{\{\s*\.secrets\.\w+\s*\}\}`
+	re := regexp.MustCompile(pattern)
+
+	// Replace the delimiters
+	result := re.ReplaceAllStringFunc(input, func(match string) string {
+		// Remove the original braces and replace with ##
+		// Trim any whitespace within the match to preserve the original path
+		replaced := "##" + match[2:len(match)-2] + "##"
+		return replaced
+	})
+
+	return result
+}
+
+func RevertDelimiters(input string) string {
+	// Define the regex pattern for the ## delimited strings
+	pattern := `##\s*\.secrets\.\w+\s*##`
+	re := regexp.MustCompile(pattern)
+
+	// Replace the ## delimiters with {{ and }}
+	result := re.ReplaceAllStringFunc(input, func(match string) string {
+		// Remove the original hashes and replace with {{}}
+		// Trim any whitespace within the match to preserve the original path
+		reverted := "{{" + match[2:len(match)-2] + "}}"
+		return reverted
+	})
+
+	return result
 }
