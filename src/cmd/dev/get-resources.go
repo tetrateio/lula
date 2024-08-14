@@ -7,6 +7,7 @@ import (
 
 	"github.com/defenseunicorns/lula/src/cmd/common"
 	"github.com/defenseunicorns/lula/src/config"
+	configuration "github.com/defenseunicorns/lula/src/pkg/common/config"
 	"github.com/defenseunicorns/lula/src/pkg/message"
 	"github.com/defenseunicorns/lula/src/types"
 	"github.com/spf13/cobra"
@@ -52,7 +53,16 @@ var getResourcesCmd = &cobra.Command{
 			message.Fatalf(err, "error reading validation: %v", err)
 		}
 
-		collection, err := DevGetResources(ctx, validationBytes, spinner)
+		v := common.GetViper()
+
+		templatedValidation, err := configuration.ExecuteTemplate(v.AllSettings(), string(validationBytes))
+		if err != nil {
+			message.Fatalf(err, "error templating validation: %v", err)
+		}
+
+		fmt.Println(string(templatedValidation))
+
+		collection, err := DevGetResources(ctx, templatedValidation, spinner)
 		if err != nil {
 			message.Fatalf(err, "error running dev get-resources: %v", err)
 		}
