@@ -2,12 +2,14 @@ domain:
   type: kubernetes
   kubernetes-spec:
     resources:
-    - name: podsvt 
-      resource-rule:   
-        group: 
-        version: v1
-        resource: {{ .variables.pods.resource }}
-        namespaces: [validation-test] 
+    {{ range .variables.resources }}
+    - name: {{ .name }}
+      resource-rule:
+        group: {{ .group }}
+        version: {{ .version }}
+        resource: {{ .resource }}
+        namespaces: {{ .namespaces }}
+    {{ end }}
 provider: 
   type: opa
   opa-spec:
@@ -17,7 +19,7 @@ provider:
       import future.keywords.every
 
       validate {
-        every pod in input.podsvt {
+        every pod in input.{{ .variables.target }} {
           podLabel := pod.metadata.labels.foo
           podLabel == "bar"
         }

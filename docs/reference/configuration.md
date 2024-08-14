@@ -40,7 +40,7 @@ domain:
         group: apps
         name: istiod
         namespaces:
-        - {{ .istio.healthcheck.namespace }}
-        resource: {{ .istio.heatlhcheck.resource }}
+        - {{ .variables.istio.healthcheck.namespace }}
+        resource: {{ .variables.istio.heatlhcheck.resource }}
         version: v1
 ```

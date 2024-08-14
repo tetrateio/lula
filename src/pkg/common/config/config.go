@@ -7,7 +7,7 @@ import (
 
 // executeTemplate templates the template string with the data map
 func ExecuteTemplate(data map[string]interface{}, templateString string) ([]byte, error) {
-	tmpl, err := template.New("template").Parse(templateString)
+	tmpl, err := template.New("template").Funcs(funcMap()).Parse(templateString)
 	if err != nil {
 		return []byte{}, err
 	}
