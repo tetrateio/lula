@@ -26,6 +26,12 @@ Each of these possible operations may require a distinct input `configuration` f
   -> Validation config is NOT added in the back-matter
 
 >[!NOTE] I think you do want to support both - the first use case is probably where the "composed" file is taken to different locations, where you don't want to have to port around all the individual validations but may need to operate on them and want the config still broken out. The second use case is more relevant to the "composed" file being an artifact of the `lula validate` command, where you'd want that file to possibly evaluate after the run (thinking in CI scenario)
+>
+> If we are going to support native go templating and expose the built-in functions (and maybe future additions of our own) then we will need to handle both identification of items that should be templated during compose as well as other items (typically sensitive) that should always remain un-templated. Both scenarios will require delineation between sensitive and non-sensitive variables/templates. 
+> 
+> Options:
+> 1. Perform a pre-template find of "sensitive" items -> replace with a unique item that retains the original path but will not be templated -> template the file -> replace the unique identifiers with the original template fields
+> 2. Fork text/template and implement a `missingkey=ignore` option such that the template is retained when no key was present to template. Suggested but not accepted in the standard library due to potential for misuse - of which is much smaller in this utilization. 
 
 3. Environment variables are going to be templated values.
 
@@ -141,6 +147,8 @@ provider:
 ```
 
 Here, no config is required, the `env` and `secret` values are provided by the environment. The .env values are persisted in the OSCAL artifact, while the .secret values are not. (somehow?)
+
+
 
 #### Use Case 5: Template of OSCAL data
 
