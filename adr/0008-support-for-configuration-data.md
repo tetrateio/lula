@@ -31,7 +31,10 @@ Each of these possible operations may require a distinct input `configuration` f
 > 
 > Options:
 > 1. Perform a pre-template find of "sensitive" items -> replace with a unique item that retains the original path but will not be templated -> template the file -> replace the unique identifiers with the original template fields
-> 2. Fork text/template and implement a `missingkey=ignore` option such that the template is retained when no key was present to template. Suggested but not accepted in the standard library due to potential for misuse - of which is much smaller in this utilization. 
+>   1.a. This isn't overly difficult to support. For the limited operations that write information to a persistent file we can perform a regex replace before and after templating to retain secret templates.
+> 2. Fork text/template and implement a `missingkey=ignore` option such that the template is retained when no key was present to template. Suggested but not accepted in the standard library due to potential for misuse - of which is much smaller in this utilization.
+>   2.a. This option is much more flexible. During compose operations that write to a file - we can disclude any data determined to be sensitive from inputs to the template operation. In doing so - the items without data (whether sensitive or unintentionally missing data) will instead retain their templating delimiters `{{ }}` and a new file is created.
+>   2.b. In doing the above - mistakes for unintentional missing templating can be re-applied easily while still providing a security guard rail for sensitive information.
 
 3. Environment variables are going to be templated values.
 
