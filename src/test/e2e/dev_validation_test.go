@@ -47,7 +47,8 @@ func TestDevValidation(t *testing.T) {
 				t.Errorf("Error reading file: %v", err)
 			}
 
-			validation, err := dev.DevValidate(ctx, validationBytes, resourcesBytes, nil)
+			var variables map[string]interface{}
+			validation, err := dev.DevValidate(ctx, validationBytes, resourcesBytes, variables, nil)
 			if err != nil {
 				t.Errorf("Error testing dev validate: %v", err)
 			}
@@ -75,8 +76,8 @@ func TestDevValidation(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error reading file: %v", err)
 			}
-
-			validation, err := dev.DevValidate(ctx, validationBytes, resourcesBytes, nil)
+			var variables map[string]interface{}
+			validation, err := dev.DevValidate(ctx, validationBytes, resourcesBytes, variables, nil)
 			if err != nil {
 				t.Errorf("Error testing dev validate: %v", err)
 			}
@@ -109,8 +110,8 @@ func TestDevValidation(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error reading file: %v", err)
 			}
-
-			validation, err := dev.DevValidate(ctx, validationBytes, resourcesBytes, nil)
+			var variables map[string]interface{}
+			validation, err := dev.DevValidate(ctx, validationBytes, resourcesBytes, variables, nil)
 			if err != nil {
 				t.Errorf("Error testing dev validate: %v", err)
 			}
