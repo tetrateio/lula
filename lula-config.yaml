@@ -28,4 +28,4 @@ variables:
       namespaces: [validation-test]
 
 secrets:
-  target: podsvt
+  target5: podsvt

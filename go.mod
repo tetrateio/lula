@@ -1,6 +1,6 @@
 module github.com/defenseunicorns/lula
 
-go 1.22.5
+go 1.22.6
 
 require (
 	github.com/BurntSushi/toml v1.4.0
@@ -37,6 +37,7 @@ require (
 	github.com/aquilax/truncate v1.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
+	github.com/brandtkeller/text-template v0.0.0-20240815031531-45a9223c5aea // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/containerd/console v1.0.3 // indirect

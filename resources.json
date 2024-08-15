@@ -1,0 +1,179 @@
+{
+  "podsvt": [
+    {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "annotations": {
+          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Pod\",\"metadata\":{\"annotations\":{},\"labels\":{\"foo\":\"bar\"},\"name\":\"test-pod-label\",\"namespace\":\"validation-test\"},\"spec\":{\"containers\":[{\"image\":\"nginx\",\"name\":\"nginx\"}]}}\n"
+        },
+        "creationTimestamp": "2024-08-08T20:40:59Z",
+        "labels": {
+          "foo": "bar"
+        },
+        "name": "test-pod-label",
+        "namespace": "validation-test",
+        "resourceVersion": "897894",
+        "uid": "8328783f-dfad-406a-90e4-05aed9ebf2b5"
+      },
+      "spec": {
+        "containers": [
+          {
+            "image": "nginx",
+            "imagePullPolicy": "Always",
+            "name": "nginx",
+            "resources": {},
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-7vnjh",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "nodeName": "lula-test-control-plane",
+        "preemptionPolicy": "PreemptLowerPriority",
+        "priority": 0,
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "serviceAccount": "default",
+        "serviceAccountName": "default",
+        "terminationGracePeriodSeconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          }
+        ],
+        "volumes": [
+          {
+            "name": "kube-api-access-7vnjh",
+            "projected": {
+              "defaultMode": 420,
+              "sources": [
+                {
+                  "serviceAccountToken": {
+                    "expirationSeconds": 3607,
+                    "path": "token"
+                  }
+                },
+                {
+                  "configMap": {
+                    "items": [
+                      {
+                        "key": "ca.crt",
+                        "path": "ca.crt"
+                      }
+                    ],
+                    "name": "kube-root-ca.crt"
+                  }
+                },
+                {
+                  "downwardAPI": {
+                    "items": [
+                      {
+                        "fieldRef": {
+                          "apiVersion": "v1",
+                          "fieldPath": "metadata.namespace"
+                        },
+                        "path": "namespace"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2024-08-14T16:01:46Z",
+            "status": "True",
+            "type": "PodReadyToStartContainers"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2024-08-08T20:40:59Z",
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2024-08-14T16:01:46Z",
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2024-08-14T16:01:46Z",
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2024-08-08T20:40:59Z",
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "containerID": "containerd://f63b2efa7b515174651e42547539e268df157f39f0530c864afef1097bd639cc",
+            "image": "docker.io/library/nginx:latest",
+            "imageID": "docker.io/library/nginx@sha256:98f8ec75657d21b924fe4f69b6b9bff2f6550ea48838af479d8894a852000e40",
+            "lastState": {
+              "terminated": {
+                "containerID": "containerd://65e3fecb804aa4a540954b9b28b6c8f030ba5475584071cc42eae1c5b88e7278",
+                "exitCode": 255,
+                "finishedAt": "2024-08-14T16:01:35Z",
+                "reason": "Unknown",
+                "startedAt": "2024-08-12T23:09:48Z"
+              }
+            },
+            "name": "nginx",
+            "ready": true,
+            "restartCount": 2,
+            "started": true,
+            "state": {
+              "running": {
+                "startedAt": "2024-08-14T16:01:46Z"
+              }
+            }
+          }
+        ],
+        "hostIP": "172.19.0.2",
+        "hostIPs": [
+          {
+            "ip": "172.19.0.2"
+          }
+        ],
+        "phase": "Running",
+        "podIP": "10.244.0.5",
+        "podIPs": [
+          {
+            "ip": "10.244.0.5"
+          }
+        ],
+        "qosClass": "BestEffort",
+        "startTime": "2024-08-08T20:40:59Z"
+      }
+    }
+  ]
+}

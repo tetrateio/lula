@@ -1,18 +1,18 @@
 package configuration
 
 import (
+	"github.com/brandtkeller/text-template/text/template"
 	"regexp"
 	"strings"
-	"text/template"
 )
 
 // executeTemplate templates the template string with the data map
 func ExecuteTemplate(data map[string]interface{}, templateString string) ([]byte, error) {
-	tmpl, err := template.New("template").Funcs(funcMap()).Parse(templateString)
+	tmpl, err := template.New("template").Parse(templateString)
 	if err != nil {
 		return []byte{}, err
 	}
-	tmpl.Option("missingkey=zero")
+	tmpl.Option("missingkey=ignore")
 
 	var buffer strings.Builder
 	err = tmpl.Execute(&buffer, data)

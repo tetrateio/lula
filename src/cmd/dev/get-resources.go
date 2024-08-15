@@ -54,27 +54,40 @@ var getResourcesCmd = &cobra.Command{
 		}
 
 		v := common.GetViper()
+		viperMap := v.AllSettings()
+		fmt.Println(viperMap)
 
-		preString := configuration.ReplaceDelimiters(string(validationBytes))
+		// preString := configuration.ReplaceDelimiters(string(validationBytes))
 
-		templatedValidation, err := configuration.ExecuteTemplate(v.AllSettings(), preString)
+		templatedValidation, err := configuration.ExecuteTemplate(viperMap, string(validationBytes))
 		if err != nil {
 			message.Fatalf(err, "error templating validation: %v", err)
 		}
-		// this string represents what composed operations would look like
-		postString := configuration.RevertDelimiters(string(templatedValidation))
-
-		fmt.Println(string(postString))
-		// run through templating again to add the secret configs
-		postTemplatedValidation, err := configuration.ExecuteTemplate(v.AllSettings(), postString)
-		if err != nil {
-			message.Fatalf(err, "error templating validation: %v", err)
-		}
-
 		fmt.Println()
-		fmt.Println(string(postTemplatedValidation))
+		fmt.Println(string(templatedValidation))
 
-		collection, err := DevGetResources(ctx, postTemplatedValidation, spinner)
+		viperMap["secrets"] = map[string]interface{}{
+			"target": "podsvt",
+		}
+
+		secretTemplatedValidation, err := configuration.ExecuteTemplate(viperMap, string(validationBytes))
+		if err != nil {
+			message.Fatalf(err, "error templating validation: %v", err)
+		}
+		fmt.Println()
+		fmt.Println(string(secretTemplatedValidation))
+
+		// // this string represents what composed operations would look like
+		// postString := configuration.RevertDelimiters(string(templatedValidation))
+
+		// fmt.Println(string(postString))
+		// // run through templating again to add the secret configs
+		// postTemplatedValidation, err := configuration.ExecuteTemplate(v.AllSettings(), postString)
+		// if err != nil {
+		// 	message.Fatalf(err, "error templating validation: %v", err)
+		// }
+
+		collection, err := DevGetResources(ctx, secretTemplatedValidation, spinner)
 		if err != nil {
 			message.Fatalf(err, "error running dev get-resources: %v", err)
 		}
