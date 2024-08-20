@@ -1,4 +1,4 @@
-# 8. Support for Configuration Data
+# 8. Support for Templating Data
 
 Date: 2024-07-22
 
@@ -13,13 +13,13 @@ There is an identified need to pull in extra information into various artifacts 
 * Adding variables and/or secrets into Lula Validation manifests
 * Templating component definitions with version numbers
 
-Each of these possible operations may require a distinct input `configuration` file that provides the data, however it is desirable that the underlying libraries and methods support all these possible use cases.
+Each of these operations fall within the purview of "templating" information and may require a various input `configuration` values to provide the data, and additionally may require different workflows under the hood to support the implementations. This document is an exploration of the use cases and identified workflows needed to suppport.
 
 ### Detailed Use Case Exploration
 
 1. User wants to have composed OSCAL model, but keep configuration separate, templated at run-time
 
-  -> Validation config is added as a separate back-matter artifact, and extracted from the back-matter when validating. (how do you merge multiple, which get precedence?)
+  -> Validation config is added as a separate back-matter artifact, and extracted from the back-matter when validating. (Do you support having multiple configs? Which get precedence?)
 
 2. User wants to have composed OSCAL model, WITH validations templated at compose time 
   
@@ -308,4 +308,67 @@ pod_label_namespace: 'validation-test'
 
 ```
 
+> [!NOTE]
+> Implications to the `config` field in the `lula-config.yaml` file -
+> This would essentially set up "default" values for the validations, which would be useful when running `lula dev` commands
+> However, would we want these default values to persist in the OSCAL artifact when this gets composed? Would we want these to
+> be used if the config didn't specify any values? 
+
+## Proposed Decision 2.1
+
+Basically the same as 2, but further specification of the `lula-config.yaml` file.
+
+Propose templated files use .tpl/.tmpl extensions to indicate that they are templated / allow for us to handle them differently.
+-> Only use .tpl/.tmpl files in validations, oscal model files should remain valid yaml/oscal
+-> If you are templating an OSCAL file, must still be valid yaml e.g., 
+```yaml
+# ... component-definition
+  links:
+    - href: '{{ const.rootUrl }}/validations/istio/healthcheck/validation.yaml'
+      rel: lula
+      text: Check that Istio is healthy
+```
+
+Proposed `lula-config.yaml` structure:
+```yaml
+log_level : 'debug'
+
+constants: # map[string]interface{}, can be any structured data -> rendered in oscal -> referenced as {{ const.istio.namespace}}
+  istio:
+    namespace: istio-system
+    config:
+      name: istio-config
+      prometheus-merge: enablePrometheusMerge
+
+variables: # map[string]string, represents environment variables -> rendered in oscal -> referenced as {{ var.some_env_var }}
+  some_env_var: some_value
+  another_env_var: another_value
+
+secrets: # map[string]string, represents secrets -> NOT rendered in oscal -> referenced as {{ secret.some_secret }}, also pulled from the environment(?) or should we think about k8s secret or other support? -> I think maybe if we do this it should be scoped to a domain
+  some_secret: some_value
+  another_secret: another_value
+
+# OSCAL Map substitutions -> instead of tmpl -> because then the target file can both be valid yaml / oscal
+oscal-maps:
+  - name: ssp-metadata
+    oscal-key: system-security-plan.metadata
+    file: ./metadata.yaml # file OR content specified
+    content: |
+      title: "System Security Plan for UDS Core"
+      last-modified: 2024-07-22Z12:00:00
+      oscal-version: 1.1.2
+```
+
+Intent between defining "constants" vs "variables" vs "secrets" is that constants are not expected to change, variables are expected to change/are environment variables, and secrets are expected to be sensitive and not rendered in the OSCAL artifact.
+
 ## Consequences
+
+Additional features to develop:
+- Update to composition to support composing template files + possibly adding a prop or something to indicate that the file is a tmpl vs yaml
+- Add templating routines that gets implemented in `validate`, `compose`, `dev`
+  -> Multiple layers of templating -
+    - Template All -> Templated during `dev`
+    - Template only Constants & Variables -> Can be templated during `compose`
+    - Template Secrets (presumably conts and vars are templated) -> Templated during `validate`, presumable after `compose`+template so that the oscal artifact is purely in memory and the compose+template version can be output as an artifact 
+- Add --template flag to `lula compose` to direct the composition to template out the validations and component-definition
+- Add --set value support (might be a viper thing)
