@@ -1,6 +1,6 @@
 # 8. Support for Templating Data
 
-Date: 2024-07-22
+Date: 2024-08-27
 
 ## Status
 
@@ -8,22 +8,48 @@ Proposed
 
 ## Context
 
-There is an identified need to pull in extra information into various artifacts that Lula operates on. For example
-* Adding metadata information to OSCAL documents during Lula Generation methods
-* Adding variables and/or secrets into Lula Validation manifests
-* Templating component definitions with version numbers
+There is an identified need to pull in extra information into various artifacts that Lula operates on. The following are the current layers of exploration for templating data:
+* Adding variables and/or secrets into runtime processing (IE available for use in templating operations)
+* Templating provided artifacts - both in isolation and during lula workflows
 
-Each of these operations fall within the purview of "templating" information and may require a various input `configuration` values to provide the data, and additionally may require different workflows under the hood to support the implementations. This document is an exploration of the use cases and identified workflows needed to suppport.
+Each of these operations fall within the purview of "templating" information and may require various input `configuration` values to provide the data, and additionally may require different workflows under the hood to support the implementations. This document is an exploration of the use cases and identified workflows needed to support.
+
+## Variable Definition
+
+This encompasses the structure of the configuration data as it exists between:
+- configuration file
+- command line arguments
+- environment variables
+
+Lula will require the ability to delineate between sensitive and non-sensitive data to be templated through any of the above methods. 
+
+When precedence has been established between the above methods, having the data available for processing allows for templating to handle how data is applied against a given artifact.
+
+## Templating
+
+Templating support for Lula requires the following:
+- Generic go templating support
+- Ability to establish a key as sensitive
+  - This value should only templated during runtime execution
+- (Proposed) Ability to support pre-determined templating functions
+
+## Constraints
+
+Lula will require valid json/yaml during operations which required marshalling data to the applicable model and validation data types. 
+
+Workflows for complex templating will be enabled through a (proposed) `template` command. Enabling users to use templating functions with an outcome that is valid json/yaml OSCAL artifact prior to use in capabilities that require schema compliant artifacts. 
+
+Any templating field used in transient OSCAL contexts will require valid use of json/yaml formatting. This typically will entail string substitution and more simple variable use scenarios. 
 
 ### Detailed Use Case Exploration
 
 1. User wants to have composed OSCAL model, but keep configuration separate, templated at run-time
 
-  -> Validation config is added as a separate back-matter artifact, and extracted from the back-matter when validating. (Do you support having multiple configs? Which get precedence?)
+Requires runtime flag being present to signal performing compose without templating.
 
 2. User wants to have composed OSCAL model, WITH validations templated at compose time 
   
-  -> Validation config is NOT added in the back-matter
+Requires runtime flag being present to signal performing compose with templating. A `lula-config.yaml` is required for this operation.
 
 >[!NOTE] I think you do want to support both - the first use case is probably where the "composed" file is taken to different locations, where you don't want to have to port around all the individual validations but may need to operate on them and want the config still broken out. The second use case is more relevant to the "composed" file being an artifact of the `lula validate` command, where you'd want that file to possibly evaluate after the run (thinking in CI scenario)
 >
@@ -32,25 +58,20 @@ Each of these operations fall within the purview of "templating" information and
 > Options:
 > 1. Perform a pre-template find of "sensitive" items -> replace with a unique item that retains the original path but will not be templated -> template the file -> replace the unique identifiers with the original template fields
 >   1.a. This isn't overly difficult to support. For the limited operations that write information to a persistent file we can perform a regex replace before and after templating to retain secret templates.
-> 2. Fork text/template and implement a `missingkey=ignore` option such that the template is retained when no key was present to template. Suggested but not accepted in the standard library due to potential for misuse - of which is much smaller in this utilization.
->   2.a. This option is much more flexible. During compose operations that write to a file - we can disclude any data determined to be sensitive from inputs to the template operation. In doing so - the items without data (whether sensitive or unintentionally missing data) will instead retain their templating delimiters `{{ }}` and a new file is created.
->   2.b. In doing the above - mistakes for unintentional missing templating can be re-applied easily while still providing a security guard rail for sensitive information.
 
 3. Environment variables are going to be templated values.
 
-  -> We can't pull this in as config, need to identify the environment variables specifically as something that should be injected at runtime (`lula validate`). These aren't secrets, so could be added in a `composed` component-definition that is provided as an artifact of the `lula validate` command.
+Establish order of precedence for the use of environment variables and allow for this data to merge with existing configuration and command-line data prior to templating operations. 
 
-4. Secrets are going to be templated values.
+>[!NOTE] This suffers from the same problem as variables generically - we need the ability to identify a variable as sensitive or non-sensitive. 
 
-  -> This is trickier... they'd probably be injected the same way as environment variables, but would need to be obfuscated in the OSCAL artifact.
+4. Templating Sensitive Keys
+
+This is a constraint that is present in all underlying variable use currently. Need to delineate between sensitive keys and non-sensitive keys in a template.
 
 5. User wants to have a templated OSCAL model, e.g., some links may be templated if root path changes
 
-6. OSCAL is created based on the aggregation of different information, e.g., a partial SSP and externally sourced metadata.
-
-7. Validation configuration values can be --set at the command line, e.g., `lula validate -f ./component-definition.yaml --set .some-value=abc123`
-
-  -> In `dev validate` this should support .env and .secret values as well, since those most likely will need to be mocked out for testing.
+6. Validation configuration values can be --set at the command line, e.g., `lula validate -f ./component-definition.yaml --set .some-value=abc123`
 
 #### Use Cases 1 & 2: Sample Lula Validation and associated config that could be templated at build-time
 
@@ -111,14 +132,12 @@ istio:
   config-name: istio-config
   prometheus-merge: enablePrometheusMerge
 ```
-^^ This is assuming we are using go-template under the hood. A different, more regid structure might be needed if a different templating method is used.
+^^ This is assuming we are using go-template under the hood. A different, more rigid structure might be needed if a different templating method is used.
 
 With a component definition that links the above validation, run:
 ```shell
 lula t compose -f ./component-definition.yaml --config ./my-config.yaml
 ```
-
-This adds the templated validation to the `back-matter` of the composed component-definition OR templates the validation and omits the config from the back-matter.
 
 #### Use Case 3 & 4: Run-time template of variables
 
@@ -135,7 +154,7 @@ domain:
   type: api
   api-spec:
     name: keycloakAdmin
-    endpoint: http://{{ .env.KEYCLOAK_HOST }}:8080/auth/admin/realms/master
+    endpoint: http://{{ .var.KEYCLOAK_HOST }}:8080/auth/admin/realms/master
     method: GET
     headers:
       Authorization: Bearer {{ .secret.KEYCLOAK_TOKEN }}
@@ -149,8 +168,7 @@ provider:
       # Some validation logic here...
 ```
 
-Here, no config is required, the `env` and `secret` values are provided by the environment. The .env values are persisted in the OSCAL artifact, while the .secret values are not. (somehow?)
-
+Here, no config is required, the `var` and `secret` values are provided by the environment. The .var values are persisted in the OSCAL artifact, while the .secret values are not.
 
 
 #### Use Case 5: Template of OSCAL data
@@ -171,152 +189,11 @@ component-definition:
                   text: Check that Istio is healthy
 ```
 
-#### Use Case 6: Lula OSCAL Generation
+## Templating Operation
 
-Need to add additional information to OSCAL documents, in this use case specifically looking at SSP generation.
+### Proposed Decision 1 - .tpl extensions
 
-We have some metadata which is constant/managed external to Lula:
-```yaml
-metadata:
-  title: "System Security Plan for UDS Core"
-  last-modified: 2024-07-22Z12:00:00
-  oscal-version: 1.1.2
-```
-
-We have some auto-generated content, e.g., created from the component-definition model
-```yaml
-system-security-plan:
-  system-characteristics:
-    system-name: "UDS Core"
-  system-implementation:
-    components:
-      - uuid: f2b245ea-f149-45cf-a740-86081fdb2922
-        title: Istio
-      - uuid: d1ce0ed3-d678-4bf0-b9f4-330bacd97473
-        title: Grafana
-```
-
-## (Proposed) Decision 1
-
-Two separate Lula Config files for the OSCAL (`lula gen`) use cases vs. Validation configuration (`lula validate`/`lula t compose`) use cases
-
-### Lula Generation
-
-Define a configuration file that when provided to a `generate` command will inject some data into the specified OscalModelSchema jsonpath:
-
-```yaml
-kind: LulaOscalConfig
-
-# Map substitutions
-maps:
-  - name: ssp-metadata
-    oscal-key: system-security-plan.metadata
-    file: ./metadata.yaml # file OR content specified
-    content: |
-      title: "System Security Plan for UDS Core"
-      last-modified: 2024-07-22Z12:00:00
-      oscal-version: 1.1.2
-```
-
-Underlying libraries/implementation will be the k8s.io kustomization/kyaml module and map merge functions to identify the path given by `oscal-key` in the OscalModelSchema and inject the contents of `file` or `content` into the schema. Presumably this will manifest as:
-
-```bash
-lula gen ssp --config config-file.yaml --component component-defintion.yaml
-```
-where the gen ssp uses the component-definition to generate the auto-portions and reads from the map substitutions in `LulaOscalConfig` to inject relevant data where specified.
-
-### Variable substitution
-
-Define a configuration file that when provided to a `validate` (or `compose` or `assess`) command will configure a viper engine to substitute the data:
-
-```yaml
-kind: LulaValidationConfig
-
-# Constants substition - gets subbed during composition
-constants:
-  - name: ...
-    value: ...
-
-# Variables - gets subbed at runtime.. from env vars?
-variables:
-  - name: ...
-    value: ...
-```
-
-The `constants` are subbed at build-time, whereas the `variables` are subbed during the runtime processes.
-
-## (Proposed) Decision 2
-
-Utilize [Viper](https://github.com/spf13/viper) as the single point-of-entry for all configuration definitions and consume the configuration for different purposes. 
-
-***Note:*** Lula likely requires Viper support for future utilization anyway. This proposal is to investigate whether this configuration data could be included through viper-native processes. 
-
-This proposal would allow for:
-- Native specification and merge (with precedence) of variables/configuration through config-file and environment variables
-- Central-control of variables independent of a single file (OSCAL/Validation) such that each does not require tight-coupling to an expected artifact
-- Variables that may be used by many validations can be centrally managed
-
-
-A `lula-config.yaml` - or other [format](https://github.com/spf13/viper?tab=readme-ov-file#reading-config-files) for which Viper natively supports - can provide support for many scenarios of interest.
-
-Adjusting Log Level in CLI runtime:
-```
-log_level : 'debug'
-```
-
-Applying variables to templated values:
-
-validation.yaml
-```yaml
-config:
-  variables:
-  - name: pod_label_resource
-    value: pods
-  - name: pod_label_namespace
-    value: validation-test      
-domain:
-  type: kubernetes
-  kubernetes-spec:
-    resources:
-    - name: podsvt 
-      resource-rule:   
-        group: 
-        version: v1
-        resource: {{ pod_label_resource }}
-        namespaces: [{{ pod_label_namespace }}] 
-provider: 
-  type: opa
-  opa-spec:
-    rego: |
-      package validate
-
-      import future.keywords.every
-
-      validate {
-        every pod in input.podsvt {
-          podLabel := pod.metadata.labels.foo
-          podLabel == "bar"
-        }
-      }
-```
-
-lula-config.yaml
-```yaml
-
-pod_label_resource: 'pods'
-pod_label_namespace: 'validation-test'
-
-```
-
-> [!NOTE]
-> Implications to the `config` field in the `lula-config.yaml` file -
-> This would essentially set up "default" values for the validations, which would be useful when running `lula dev` commands
-> However, would we want these default values to persist in the OSCAL artifact when this gets composed? Would we want these to
-> be used if the config didn't specify any values? 
-
-## Proposed Decision 2.1
-
-Basically the same as 2, but further specification of the `lula-config.yaml` file.
+Use of Viper with further specification of the `lula-config.yaml` file.
 
 Propose templated files use .tpl/.tmpl extensions to indicate that they are templated / allow for us to handle them differently.
 -> Only use .tpl/.tmpl files in validations, oscal model files should remain valid yaml/oscal
@@ -328,6 +205,36 @@ Propose templated files use .tpl/.tmpl extensions to indicate that they are temp
       rel: lula
       text: Check that Istio is healthy
 ```
+
+
+#### Consequences
+
+Additional features to develop:
+- Update to composition to support composing template files + possibly adding a prop or something to indicate that the file is a tmpl vs yaml
+- Add templating routines that gets implemented in `validate`, `compose`, `dev`
+  -> Multiple layers of templating -
+    - Template All -> Templated during `dev`
+    - Template only Constants & Variables -> Can be templated during `compose`
+    - Template Secrets (presumably const and vars are templated) -> Templated during `validate`, presumable after `compose`+template so that the oscal artifact is purely in memory and the compose+template version can be output as an artifact 
+- Add --template flag to `lula compose` to direct the composition to template out the validations and component-definition
+- Add --set value support (might be a viper thing)
+
+### Proposed Decision 2 - Most Permissive / Least Controlled
+
+Given the expectations that a provided OSCAL artifact must be schema compliant and valid json/yaml, proposing Lula provide tooling and capabilities that enable the use of templating in a permissive manner that doesn't tightly controlled use.
+
+Therefor enabling the users of this templating feature to craft artifacts with as little or as much of the built-in complexity of go templating functionality while validating for correctness and schema compliance where required and returning concise errors in the event of any issue. 
+
+This will still require methods for identification of sensitive variables 
+
+#### Consequences
+
+- Creation of a `lula tools template` command for a workflow where an end user wants to incorporate complex templating logic before executing a process that expects valid json/yaml. 
+- Error handling required for determination of malformed data. Could be natively reported from the `unmarshall` operation
+
+## Variable Structure
+
+### Decision 1 - const / var / secret 
 
 Proposed `lula-config.yaml` structure:
 ```yaml
@@ -348,27 +255,26 @@ secrets: # map[string]string, represents secrets -> NOT rendered in oscal -> ref
   some_secret: some_value
   another_secret: another_value
 
-# OSCAL Map substitutions -> instead of tmpl -> because then the target file can both be valid yaml / oscal
-oscal-maps:
-  - name: ssp-metadata
-    oscal-key: system-security-plan.metadata
-    file: ./metadata.yaml # file OR content specified
-    content: |
-      title: "System Security Plan for UDS Core"
-      last-modified: 2024-07-22Z12:00:00
-      oscal-version: 1.1.2
 ```
 
 Intent between defining "constants" vs "variables" vs "secrets" is that constants are not expected to change, variables are expected to change/are environment variables, and secrets are expected to be sensitive and not rendered in the OSCAL artifact.
 
-## Consequences
+### Decision 2 - var / sensitive
 
-Additional features to develop:
-- Update to composition to support composing template files + possibly adding a prop or something to indicate that the file is a tmpl vs yaml
-- Add templating routines that gets implemented in `validate`, `compose`, `dev`
-  -> Multiple layers of templating -
-    - Template All -> Templated during `dev`
-    - Template only Constants & Variables -> Can be templated during `compose`
-    - Template Secrets (presumably conts and vars are templated) -> Templated during `validate`, presumable after `compose`+template so that the oscal artifact is purely in memory and the compose+template version can be output as an artifact 
-- Add --template flag to `lula compose` to direct the composition to template out the validations and component-definition
-- Add --set value support (might be a viper thing)
+Proposed `lula-config.yaml` structure:
+```yaml
+log_level : 'debug'
+
+variables: # map[string]interface{}
+  some_env_var: 
+    nested_var: some_nested_value
+  another_env_var: another_value
+
+secret: # map[string]interface{}
+  some_secret:
+    some_nested_secret: some_nested_secret_value
+  another_secret: another_value
+
+```
+
+Use of delineating `variables` from `secrets` allows for more dynamic templating function use with the ability to identify and retract sensitive data from being available during templating operations. Command flags such as `--variable` and `--secret` (other other names) could be present to set data in these maps from the command line. Environment variables with similar prefixes `LULA_VAR_SOME_ENV_VAR` and `LULA_SECRET_SOME_SECRET` could also be merged into the map prior to templating. 
