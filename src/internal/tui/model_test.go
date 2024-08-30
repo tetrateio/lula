@@ -18,6 +18,7 @@ import (
 
 func init() {
 	lipgloss.SetColorProfile(termenv.Ascii)
+	tea.Sequence()
 }
 
 func oscalFromPath(t *testing.T, path string) *oscalTypes_1_1_2.OscalCompleteSchema {
@@ -40,7 +41,9 @@ func TestNewComponentDefinitionModel(t *testing.T) {
 	model := tui.NewOSCALModel(oscalModel)
 	testModel := teatest.NewTestModel(t, model, teatest.WithInitialTermSize(common.DefaultWidth, common.DefaultHeight))
 
-	testModel.Send(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if err := testModel.Quit(); err != nil {
+		t.Fatal(err)
+	}
 
 	out, err := io.ReadAll(testModel.FinalOutput(t, teatest.WithFinalTimeout(time.Second*5)))
 	if err != nil {
@@ -64,7 +67,9 @@ func TestMultiComponentDefinitionModel(t *testing.T) {
 	testModel.Send(tea.KeyMsg{Type: tea.KeyRight}) // Select control
 	testModel.Send(tea.KeyMsg{Type: tea.KeyEnter}) // Open control
 
-	testModel.Send(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if err := testModel.Quit(); err != nil {
+		t.Fatal(err)
+	}
 
 	out, err := io.ReadAll(testModel.FinalOutput(t, teatest.WithFinalTimeout(time.Second*5)))
 	if err != nil {
@@ -80,7 +85,10 @@ func TestNewAssessmentResultsModel(t *testing.T) {
 	testModel := teatest.NewTestModel(t, model, teatest.WithInitialTermSize(common.DefaultWidth, common.DefaultHeight))
 
 	testModel.Send(tea.KeyMsg{Type: tea.KeyTab})
-	testModel.Send(tea.KeyMsg{Type: tea.KeyCtrlC})
+
+	if err := testModel.Quit(); err != nil {
+		t.Fatal(err)
+	}
 
 	out, err := io.ReadAll(testModel.FinalOutput(t, teatest.WithFinalTimeout(time.Second*5)))
 	if err != nil {
@@ -102,7 +110,9 @@ func TestComponentControlSelect(t *testing.T) {
 	testModel.Send(tea.KeyMsg{Type: tea.KeyRight}) // Select control
 	testModel.Send(tea.KeyMsg{Type: tea.KeyEnter}) // Open control
 
-	testModel.Send(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if err := testModel.Quit(); err != nil {
+		t.Fatal(err)
+	}
 
 	out, err := io.ReadAll(testModel.FinalOutput(t, teatest.WithFinalTimeout(time.Second*5)))
 	if err != nil {
