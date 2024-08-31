@@ -1,15 +1,10 @@
 package tui_test
 
 import (
-	"bytes"
 	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/aymanbagabas/go-udiff"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/exp/teatest"
@@ -97,79 +92,24 @@ func TestNewAssessmentResultsModel(t *testing.T) {
 
 // TestComponentControlSelect tests that the user can navigate to a control, select it, and see expected
 // remarks, description, and validations
-// func TestComponentControlSelect(t *testing.T) {
-// 	oscalModel := oscalFromPath(t, "../../test/unit/common/oscal/valid-component.yaml")
-// 	model := tui.NewOSCALModel(oscalModel)
-// 	testModel := teatest.NewTestModel(t, model, teatest.WithInitialTermSize(common.DefaultWidth, common.DefaultHeight))
+func TestComponentControlSelect(t *testing.T) {
+	oscalModel := oscalFromPath(t, "../../test/unit/common/oscal/valid-component.yaml")
+	model := tui.NewOSCALModel(oscalModel)
+	testModel := teatest.NewTestModel(t, model, teatest.WithInitialTermSize(common.DefaultWidth, common.DefaultHeight))
 
-// 	// Navigate to the control
-// 	testModel.Send(tea.KeyMsg{Type: tea.KeyRight}) // Select component
-// 	testModel.Send(tea.KeyMsg{Type: tea.KeyRight}) // Select framework
-// 	testModel.Send(tea.KeyMsg{Type: tea.KeyRight}) // Select control
-// 	testModel.Send(tea.KeyMsg{Type: tea.KeyEnter}) // Open control
+	// Navigate to the control
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRight}) // Select component
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRight}) // Select framework
+	testModel.Send(tea.KeyMsg{Type: tea.KeyRight}) // Select control
+	testModel.Send(tea.KeyMsg{Type: tea.KeyEnter}) // Open control
 
-// 	time.Sleep(time.Second * 2)
-
-// 	if err := testModel.Quit(); err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	testModel.WaitFinished(t, teatest.WithFinalTimeout(time.Second*5))
-
-// 	out, err := io.ReadAll(testModel.FinalOutput(t, teatest.WithFinalTimeout(time.Second*5)))
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
-// 	teatest.RequireEqualOutput(t, out)
-// }
-
-// RequireEqualEscape is a helper function to assert the given output is
-// the expected from the golden files, printing its diff in case it is not.
-func requireEqualEscape(tb testing.TB, out []byte, escapes bool) {
-	tb.Helper()
-
-	out = fixLineEndings(out)
-
-	if err := os.WriteFile("test-got.golden", out, 0o600); err != nil {
-		tb.Fatal(err)
+	if err := testModel.Quit(); err != nil {
+		t.Fatal(err)
 	}
 
-	golden := filepath.Join("testdata", tb.Name()+".golden")
+	testModel.WaitFinished(t, teatest.WithFinalTimeout(time.Second*5))
 
-	goldenBts, err := os.ReadFile(golden)
-	if err != nil {
-		tb.Fatal(err)
-	}
+	fm := testModel.FinalModel(t, teatest.WithFinalTimeout(time.Second*5))
 
-	goldenBts = fixLineEndings(goldenBts)
-	goldenStr := string(goldenBts)
-	outStr := string(out)
-	if escapes {
-		goldenStr = escapesSeqs(goldenStr)
-		outStr = escapesSeqs(outStr)
-	}
-
-	if err := os.WriteFile("test-expected.golden", []byte(goldenStr), 0o600); err != nil {
-		tb.Fatal(err)
-	}
-
-	diff := udiff.Unified("golden", "run", goldenStr, outStr)
-	if diff != "" {
-		tb.Fatalf("output does not match, expected:\n\n%s\n\ngot:\n\n%s\n\ndiff:\n\n%s", goldenStr, outStr, diff)
-	}
-}
-
-func fixLineEndings(in []byte) []byte {
-	return bytes.ReplaceAll(in, []byte("\r\n"), []byte{'\n'})
-}
-
-func escapesSeqs(in string) string {
-	s := strings.Split(in, "\n")
-	for i, l := range s {
-		q := strconv.Quote(l)
-		q = strings.TrimPrefix(q, `"`)
-		q = strings.TrimSuffix(q, `"`)
-		s[i] = q
-	}
-	return strings.Join(s, "\n")
+	teatest.RequireEqualOutput(t, []byte(fm.View()))
 }
