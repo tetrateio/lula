@@ -1,6 +1,6 @@
 # 8. Support for Templating Data
 
-Date: 2024-08-27
+Date: 2024-09-04
 
 ## Status
 
@@ -8,7 +8,7 @@ Proposed
 
 ## Context
 
-There is an identified need to pull in extra information into various artifacts that Lula operates on. The following are the current layers of exploration for templating data:
+There is an identified need to pull configuration dynamically for various artifacts that Lula operates on. The following are the current layers of exploration for templating data:
 * Adding variables and/or secrets into runtime processing (IE available for use in templating operations)
 * Templating provided artifacts - both in isolation and during lula workflows
 
@@ -31,13 +31,13 @@ Templating support for Lula requires the following:
 - Generic go templating support
 - Ability to establish a key as sensitive
   - This value should only templated during runtime execution
-- (Proposed) Ability to support pre-determined templating functions
+- Ability to support pre-determined templating functions
 
 ## Constraints
 
-Lula will require valid json/yaml during operations which required marshalling data to the applicable model and validation data types. 
+Lula will require valid json/yaml during operations which required unmarshalling data to the applicable model and validation data types. 
 
-Workflows for complex templating will be enabled through a (proposed) `template` command. Enabling users to use templating functions with an outcome that is valid json/yaml OSCAL artifact prior to use in capabilities that require schema compliant artifacts. 
+Workflows for complex templating will be enabled through a `template` command. Enabling users to use templating functions with an outcome that is valid json/yaml artifact prior to use in capabilities that require schema compliant artifacts. 
 
 Any templating field used in transient OSCAL contexts will require valid use of json/yaml formatting. This typically will entail string substitution and more simple variable use scenarios. 
 
@@ -51,9 +51,7 @@ Requires runtime flag being present to signal performing compose without templat
   
 Requires runtime flag being present to signal performing compose with templating. A `lula-config.yaml` is required for this operation.
 
->[!NOTE] I think you do want to support both - the first use case is probably where the "composed" file is taken to different locations, where you don't want to have to port around all the individual validations but may need to operate on them and want the config still broken out. The second use case is more relevant to the "composed" file being an artifact of the `lula validate` command, where you'd want that file to possibly evaluate after the run (thinking in CI scenario)
->
-> If we are going to support native go templating and expose the built-in functions (and maybe future additions of our own) then we will need to handle both identification of items that should be templated during compose as well as other items (typically sensitive) that should always remain un-templated. Both scenarios will require delineation between sensitive and non-sensitive variables/templates. 
+>[!NOTE] If we are going to support native go templating and expose the built-in functions (and maybe future additions of our own) then we will need to handle both identification of items that should be templated during compose as well as other items (typically sensitive) that should always remain un-templated. Both scenarios will require delineation between sensitive and non-sensitive variables/templates. 
 > 
 > Options:
 > 1. Perform a pre-template find of "sensitive" items -> replace with a unique item that retains the original path but will not be templated -> template the file -> replace the unique identifiers with the original template fields
@@ -67,7 +65,7 @@ Establish order of precedence for the use of environment variables and allow for
 
 4. Templating Sensitive Keys
 
-This is a constraint that is present in all underlying variable use currently. Need to delineate between sensitive keys and non-sensitive keys in a template.
+This is a constraint that is present in all underlying variable use currently. Need to delineate between sensitive keys and non-sensitive keys in a template fora ny artifact being written to a file or logged in any capacity.
 
 5. User wants to have a templated OSCAL model, e.g., some links may be templated if root path changes
 
@@ -136,7 +134,7 @@ istio:
 
 With a component definition that links the above validation, run:
 ```shell
-lula t compose -f ./component-definition.yaml --config ./my-config.yaml
+lula tools compose -f ./component-definition.yaml --config ./my-config.yaml
 ```
 
 #### Use Case 3 & 4: Run-time template of variables
