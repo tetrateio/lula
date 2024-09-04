@@ -3,14 +3,12 @@ package validate
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/defenseunicorns/go-oscal/src/pkg/files"
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/cmd/common"
-	pkgCommon "github.com/defenseunicorns/lula/src/pkg/common"
 	"github.com/defenseunicorns/lula/src/pkg/common/composition"
+	"github.com/defenseunicorns/lula/src/pkg/common/network"
 	"github.com/defenseunicorns/lula/src/pkg/common/oscal"
 	requirementstore "github.com/defenseunicorns/lula/src/pkg/common/requirement-store"
 	validationstore "github.com/defenseunicorns/lula/src/pkg/common/validation-store"
@@ -116,24 +114,21 @@ func ValidateCommand() *cobra.Command {
 // It will then read those files to perform validation and return an ResultObject
 func ValidateOnPath(path string, target string) (assessmentResult *oscalTypes_1_1_2.AssessmentResults, err error) {
 
-	_, err = os.Stat(path)
-	if os.IsNotExist(err) {
-		return assessmentResult, fmt.Errorf("path: %v does not exist - unable to digest document", path)
-	}
-
-	data, err := os.ReadFile(path)
+	data, err := network.Fetch(path)
 	if err != nil {
 		return assessmentResult, err
 	}
 
-	// Change Cwd to the directory of the component definition
-	dirPath := filepath.Dir(path)
-	message.Debugf("changing cwd to %s", dirPath)
-	resetCwd, err := pkgCommon.SetCwdToFileDir(dirPath)
-	if err != nil {
-		return assessmentResult, err
-	}
-	defer resetCwd()
+	// TODO: consider the implications of composition and import
+
+	// // Change Cwd to the directory of the component definition
+	// dirPath := filepath.Dir(path)
+	// message.Debugf("changing cwd to %s", dirPath)
+	// resetCwd, err := pkgCommon.SetCwdToFileDir(dirPath)
+	// if err != nil {
+	// 	return assessmentResult, err
+	// }
+	// defer resetCwd()
 
 	compDef, err := oscal.NewOscalComponentDefinition(data)
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 	"github.com/defenseunicorns/go-oscal/src/pkg/files"
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/cmd/common"
-	pkgCommon "github.com/defenseunicorns/lula/src/pkg/common"
+	"github.com/defenseunicorns/lula/src/pkg/common/network"
 	"github.com/defenseunicorns/lula/src/pkg/common/oscal"
 	"github.com/defenseunicorns/lula/src/pkg/common/result"
 	"github.com/defenseunicorns/lula/src/pkg/message"
@@ -215,7 +215,7 @@ func readManyAssessmentResults(fileArray []string) (map[string]*oscalTypes_1_1_2
 			return nil, fmt.Errorf("invalid file extension: %s, requires .json or .yaml", fileString)
 		}
 
-		data, err := pkgCommon.ReadFileToBytes(fileString)
+		data, err := network.Fetch(fileString)
 		if err != nil {
 			return nil, err
 		}
