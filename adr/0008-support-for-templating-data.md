@@ -189,7 +189,7 @@ component-definition:
 
 ## Templating Operation
 
-### Proposed Decision 1 - .tpl extensions
+### Option 1 - .tpl extensions
 
 Use of Viper with further specification of the `lula-config.yaml` file.
 
@@ -217,7 +217,7 @@ Additional features to develop:
 - Add --template flag to `lula compose` to direct the composition to template out the validations and component-definition
 - Add --set value support (might be a viper thing)
 
-### Proposed Decision 2 - Most Permissive / Least Controlled
+### Option 2 - Most Permissive / Least Controlled
 
 Given the expectations that a provided OSCAL artifact must be schema compliant and valid json/yaml, proposing Lula provide tooling and capabilities that enable the use of templating in a permissive manner that doesn't tightly controlled use.
 
@@ -232,7 +232,7 @@ This will still require methods for identification of sensitive variables
 
 ## Variable Structure
 
-### Decision 1 - const / var / secret 
+### Option 1 - const / var / secret 
 
 Proposed `lula-config.yaml` structure:
 ```yaml
@@ -257,7 +257,7 @@ secrets: # map[string]string, represents secrets -> NOT rendered in oscal -> ref
 
 Intent between defining "constants" vs "variables" vs "secrets" is that constants are not expected to change, variables are expected to change/are environment variables, and secrets are expected to be sensitive and not rendered in the OSCAL artifact.
 
-### Decision 2 - var / sensitive
+### Option 2 - var / sensitive
 
 Proposed `lula-config.yaml` structure:
 ```yaml
@@ -276,3 +276,7 @@ secret: # map[string]interface{}
 ```
 
 Use of delineating `variables` from `secrets` allows for more dynamic templating function use with the ability to identify and retract sensitive data from being available during templating operations. Command flags such as `--variable` and `--secret` (other other names) could be present to set data in these maps from the command line. Environment variables with similar prefixes `LULA_VAR_SOME_ENV_VAR` and `LULA_SECRET_SOME_SECRET` could also be merged into the map prior to templating. 
+
+## Decision
+
+<add decision here>
