@@ -1,1 +1,14 @@
 log_level: info
+
+variables:
+  resources:
+    jsoncm: configmaps
+    yamlcm: configmaps
+    secret: secrets
+    pod: pods
+
+  type: software
+  title: lula
+
+secrets:
+  username: username

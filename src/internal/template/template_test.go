@@ -10,10 +10,10 @@ import (
 
 func TestExecuteTemplate(t *testing.T) {
 
-	test := func(t *testing.T, data map[string]interface{}, preTemplate string, expected string) {
+	test := func(t *testing.T, data map[string]interface{}, sensitive bool, preTemplate string, expected string) {
 		t.Helper()
 		// templateData returned
-		got, err := template.ExecuteTemplate(data, preTemplate)
+		got, err := template.ExecuteTemplate(data, preTemplate, sensitive)
 		if err != nil {
 			t.Fatalf("error templating data: %s\n", err.Error())
 		}
@@ -28,15 +28,54 @@ func TestExecuteTemplate(t *testing.T) {
 			"testVar": "testing",
 		}
 
-		test(t, data, "{{ .testVar }}", "testing")
+		test(t, data, true, "{{ .testVar }}", "testing")
 	})
 
 	t.Run("Test {{ .testVar }} but empty data", func(t *testing.T) {
 		data := map[string]interface{}{}
 
-		test(t, data, "{{ .testVar }}", "<no value>")
+		test(t, data, true, "{{ .testVar }}", "<no value>")
 	})
 
+	t.Run("Sensitive templating with data - sensitive true", func(t *testing.T) {
+		// represent .secrets.lulakey
+		data := map[string]interface{}{
+			"secrets": map[string]interface{}{
+				"lulakey": "lulavalue",
+			},
+		}
+
+		test(t, data, true, "{{ .secrets.lulakey }}", "lulavalue")
+
+	})
+
+	t.Run("Sensitive templating with data - sensitive false", func(t *testing.T) {
+		// represent .secrets.lulakey
+		data := map[string]interface{}{
+			"secrets": map[string]interface{}{
+				"lulakey": "lulavalue",
+			},
+		}
+
+		test(t, data, false, "{{ .secrets.lulakey }}", "{{ .secrets.lulakey }}")
+
+	})
+
+	t.Run("Sensitive templating with no data - sensitive true", func(t *testing.T) {
+		// represent .secrets.lulakey
+		data := map[string]interface{}{}
+
+		test(t, data, true, "{{ .secrets.lulakey }}", "<no value>")
+
+	})
+
+	t.Run("Sensitive templating with no data - sensitive false", func(t *testing.T) {
+		// represent .secrets.lulakey
+		data := map[string]interface{}{}
+
+		test(t, data, false, "{{ .secrets.lulakey }}", "{{ .secrets.lulakey }}")
+
+	})
 }
 
 func TestGetEnvVars(t *testing.T) {

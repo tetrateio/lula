@@ -14,6 +14,7 @@ import (
 type templateFlags struct {
 	InputFile  string // -f --input-file
 	OutputFile string // -o --output-file
+	Secrets    bool   // -s --secrets
 }
 
 var templateOpts = &templateFlags{}
@@ -24,6 +25,9 @@ To template an OSCAL Model:
 
 To indicate a specific output file:
 	lula tools template -f ./oscal-component.yaml -o templated-oscal-component.yaml
+
+To include templating sensitive keys:
+	lula tools template -f ./oscal-component.yaml -s
 
 Data for the templating should be stored under the 'variables' configuration item in a lula-config.yaml file
 `
@@ -50,7 +54,8 @@ var templateCmd = &cobra.Command{
 		// Handles merging viper config file data + environment variables
 		mergedMap := template.CollectTemplatingData(viperData)
 
-		templatedData, err := template.ExecuteTemplate(mergedMap, string(data))
+		// Template the sensitive information by default
+		templatedData, err := template.ExecuteTemplate(mergedMap, string(data), templateOpts.Secrets)
 		if err != nil {
 			message.Fatalf(err, "error templating validation: %v", err)
 		}
@@ -86,4 +91,5 @@ func init() {
 	templateCmd.Flags().StringVarP(&templateOpts.InputFile, "input-file", "f", "", "the path to the target artifact")
 	templateCmd.MarkFlagRequired("input-file")
 	templateCmd.Flags().StringVarP(&templateOpts.OutputFile, "output-file", "o", "", "the path to the output file. If not specified, the output file will be directed to stdout")
+	templateCmd.Flags().BoolVarP(&templateOpts.Secrets, "secrets", "s", false, "perform the templating of secret keys - default=false")
 }
