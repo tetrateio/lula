@@ -128,6 +128,33 @@ var generateComponentCmd = &cobra.Command{
 	},
 }
 
+func GenerateProfileCommand() *cobra.Command {
+	var (
+		source  string
+		include []string
+		exclude []string
+	)
+
+	cmd := &cobra.Command{
+		Use:     "assessment-plan",
+		Aliases: []string{"ap"},
+		Args:    cobra.MaximumNArgs(1),
+		Short:   "Generate an assessment plan OSCAL template",
+		Run: func(_ *cobra.Command, args []string) {
+			message.Info("generate assessment-plan executed")
+
+			// For each component-definition in array of component-definitions
+			// Read component-definition
+			// Collect all implemented-requirements
+			// Collect all items from the backmatter
+			// Create new assessment-plan object
+			// Transfer to assessment-plan.reviewed-controls?
+		},
+	}
+
+	return cmd
+}
+
 // var generateAssessmentPlanCmd = &cobra.Command{
 // 	Use:     "assessment-plan",
 // 	Aliases: []string{"ap"},
