@@ -1,0 +1,294 @@
+([]interface {}) (len=1 cap=1) {
+ (tea.WindowSizeMsg) {
+  Width: (int) 200,
+  Height: (int) 59
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) right
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) right
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) right
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) enter
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) right
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) e
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) esc
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) e
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg)  
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) b
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.blinkCanceled) {
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) y
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.blinkCanceled) {
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) e
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.blinkCanceled) {
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) enter
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.BlinkMsg) {
+  id: (int) 0,
+  tag: (int) 6
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) ctrl+s
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) enter
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (tea.sequenceMsg) (len=2 cap=2) {
+  (tea.Cmd) 0x102d9c1f0,
+  (tea.Cmd) 0x102d9b520
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveStartMsg) {
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveModelMsg) {
+  InQuitWorkflow: (bool) false
+ }
+}
+oscalFilePath: ./src/test/unit/common/oscal/valid-multi-component.yaml
+model saved
+([]interface {}) (len=1 cap=1) {
+ (common.SaveSuccessMsg) {
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (tea.sequenceMsg) (len=2 cap=2) {
+  (tea.Cmd) 0x10429f0e0,
+  (tea.Cmd) 0x10429ffa0
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveSuccessMsg) {
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveCloseAndResetMsg) {
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) ctrl+c
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) esc
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) e
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg)  
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) b
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.blinkCanceled) {
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) y
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.blinkCanceled) {
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) e
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.blinkCanceled) {
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) enter
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.BlinkMsg) {
+  id: (int) 0,
+  tag: (int) 11
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) ctrl+s
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) enter
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (tea.sequenceMsg) (len=2 cap=2) {
+  (tea.Cmd) 0x102d9c1f0,
+  (tea.Cmd) 0x102d9b520
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveStartMsg) {
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveModelMsg) {
+  InQuitWorkflow: (bool) false
+ }
+}
+oscalFilePath: ./src/test/unit/common/oscal/valid-multi-component.yaml
+model saved
+([]interface {}) (len=1 cap=1) {
+ (common.SaveSuccessMsg) {
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (tea.sequenceMsg) (len=2 cap=2) {
+  (tea.Cmd) 0x10429f0e0,
+  (tea.Cmd) 0x10429ffa0
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveSuccessMsg) {
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveCloseAndResetMsg) {
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) enter
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) e
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg)  
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) b
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.blinkCanceled) {
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) y
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.blinkCanceled) {
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) e
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.blinkCanceled) {
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) enter
+}
+([]interface {}) (len=1 cap=1) {
+ (cursor.BlinkMsg) {
+  id: (int) 0,
+  tag: (int) 16
+ }
+}
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) ctrl+c
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) ctrl+s
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (tea.KeyMsg) enter
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (tea.sequenceMsg) (len=2 cap=2) {
+  (tea.Cmd) 0x102d9c1f0,
+  (tea.Cmd) 0x102d9b520
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveStartMsg) {
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveModelMsg) {
+  InQuitWorkflow: (bool) true
+ }
+}
+oscalFilePath: ./src/test/unit/common/oscal/valid-multi-component.yaml
+model saved
+([]interface {}) (len=1 cap=1) {
+ (common.SaveSuccessMsg) {
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (tea.sequenceMsg) (len=3 cap=4) {
+  (tea.Cmd) 0x10429f0e0,
+  (tea.Cmd) 0x10429ffa0,
+  (tea.Cmd) 0x102d4f010
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveSuccessMsg) {
+ }
+}
+in popup view
+([]interface {}) (len=1 cap=1) {
+ (common.SaveCloseAndResetMsg) {
+ }
+}

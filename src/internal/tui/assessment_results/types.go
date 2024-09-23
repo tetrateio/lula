@@ -2,6 +2,7 @@ package assessmentresults
 
 import (
 	blist "github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/viewport"
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/internal/tui/common"
@@ -22,7 +23,9 @@ type Model struct {
 	findings            blist.Model
 	findingPicker       viewport.Model
 	findingSummary      viewport.Model
+	findingsTable       table.Model
 	observationSummary  viewport.Model
+	observationsTable   table.Model
 	width               int
 	height              int
 }
@@ -41,9 +44,11 @@ const (
 var maxFocus = focusObservations
 
 type result struct {
-	uuid, title  string
-	findings     *[]oscalTypes_1_1_2.Finding
-	observations *[]oscalTypes_1_1_2.Observation
+	uuid, title      string
+	findings         *[]oscalTypes_1_1_2.Finding
+	observations     *[]oscalTypes_1_1_2.Observation
+	findingsRows     []table.Row
+	observationsRows []table.Row
 }
 
 type finding struct {

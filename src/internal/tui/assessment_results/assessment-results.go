@@ -7,6 +7,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/key"
 	blist "github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -29,11 +30,36 @@ func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentRes
 
 	if assessmentResults != nil {
 		for _, r := range assessmentResults.Results {
+			var findingsRows []table.Row
+			var observationsRows []table.Row
+			for _, f := range *r.Findings {
+				findingsRows = append(findingsRows, table.Row{f.Target.TargetId, f.Target.Status.State, f.Description})
+			}
+			for _, o := range *r.Observations {
+				state := "undefined"
+				var remarks strings.Builder
+				if o.RelevantEvidence != nil {
+					for _, re := range *o.RelevantEvidence {
+						if re.Description == "Result: satisfied\n" {
+							state = "satisfied"
+						} else if re.Description == "Result: not-satisfied\n" {
+							state = "not-satisfied"
+						}
+						if re.Remarks != "" {
+							remarks.WriteString(re.Remarks)
+						}
+					}
+				}
+				observationsRows = append(observationsRows, table.Row{o.Description, state, remarks.String()})
+			}
+
 			results = append(results, result{
-				uuid:         r.UUID,
-				title:        r.Title,
-				findings:     r.Findings,
-				observations: r.Observations,
+				uuid:             r.UUID,
+				title:            r.Title,
+				findings:         r.Findings,
+				observations:     r.Observations,
+				findingsRows:     findingsRows,
+				observationsRows: observationsRows,
 			})
 		}
 	}
@@ -79,6 +105,20 @@ func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentRes
 	help.OneLine = true
 	help.ShortHelp = []key.Binding{assessmentHotkeys.Help}
 
+	findingsTable := table.New(
+		table.WithRows(selectedResult.findingsRows),
+		table.WithColumns([]table.Column{{Title: "Control", Width: 10}, {Title: "Status", Width: 10}, {Title: "Description", Width: 40}}),
+		table.WithHeight(20),
+	)
+
+	observationsTable := table.New(
+		table.WithRows(selectedResult.observationsRows),
+		table.WithColumns([]table.Column{{Title: "Observation", Width: 10}, {Title: "Status", Width: 10}, {Title: "Remarks", Width: 40}}),
+		table.WithHeight(20),
+	)
+	// findingsTable.SetStyles()
+	// TODO: update table height and width - findingsTable.SetHeight()
+
 	return Model{
 		keys:               assessmentHotkeys,
 		help:               help,
@@ -86,8 +126,10 @@ func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentRes
 		resultsPicker:      resultsPicker,
 		selectedResult:     selectedResult,
 		findings:           f,
+		findingsTable:      findingsTable,
 		findingPicker:      findingPicker,
 		findingSummary:     findingSummary,
+		observationsTable:  observationsTable,
 		observationSummary: observationSummary,
 	}
 }
@@ -275,12 +317,14 @@ func (m Model) updateViewportContent(resultType string) string {
 	return lipgloss.JoinVertical(lipgloss.Top, s.String(), help.View())
 }
 
-func (m Model) renderSummary() string {
-	return "⚠️ Summary Under Construction ⚠️"
+func (m *Model) renderSummary() string {
+	return m.findingsTable.View()
+	// return "⚠️ Summary Under Construction ⚠️"
 }
 
-func (m Model) renderObservations() string {
-	return "⚠️ Observations Under Construction ⚠️"
+func (m *Model) renderObservations() string {
+	return m.observationsTable.View()
+	// return "⚠️ Observations Under Construction ⚠️"
 }
 
 func getResultText(result result) string {
