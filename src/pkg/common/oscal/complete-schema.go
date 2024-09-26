@@ -41,6 +41,11 @@ func WriteOscalModelNew(filePath string, model OSCALModel) error {
 	// Ensure model is deterministic
 	model.MakeDeterministic()
 
+	err := model.HandleExisting(filePath)
+	if err != nil {
+		return err
+	}
+
 	// write to file
 	var b bytes.Buffer
 
@@ -54,7 +59,7 @@ func WriteOscalModelNew(filePath string, model OSCALModel) error {
 		yamlEncoder.Encode(model.GetCompleteModel())
 	}
 
-	err := files.WriteOutput(b.Bytes(), filePath)
+	err = files.WriteOutput(b.Bytes(), filePath)
 	if err != nil {
 		return err
 	}
@@ -111,12 +116,12 @@ func WriteOscalModel(filePath string, model *oscalTypes.OscalModels) error {
 	// If the deterministic update is applied here - Lula will fix OSCAL that was previously written
 	// or generated outside of Lula workflows
 	// TODO: maybe implement an interface for common commands?
-	switch modelType {
-	case "component":
-		MakeComponentDeterminstic(model.ComponentDefinition)
-	case "assessment-results":
-		MakeAssessmentResultsDeterministic(model.AssessmentResults)
-	}
+	// switch modelType {
+	// case "component":
+	// 	MakeComponentDeterminstic(model.ComponentDefinition)
+	// case "assessment-results":
+	// 	MakeAssessmentResultsDeterministic(model.AssessmentResults)
+	// }
 
 	var b bytes.Buffer
 
@@ -158,9 +163,9 @@ func OverwriteOscalModel(filePath string, model *oscalTypes.OscalModels) error {
 	if model.ComponentDefinition != nil {
 		MakeComponentDeterminstic(model.ComponentDefinition)
 	}
-	if model.AssessmentResults != nil {
-		MakeAssessmentResultsDeterministic(model.AssessmentResults)
-	}
+	// if model.AssessmentResults != nil {
+	// 	MakeAssessmentResultsDeterministic(model.AssessmentResults)
+	// }
 	var b bytes.Buffer
 
 	if filepath.Ext(filePath) == ".json" {

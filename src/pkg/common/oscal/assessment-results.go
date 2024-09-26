@@ -2,12 +2,13 @@ package oscal
 
 import (
 	"fmt"
+	"os"
 	"slices"
 	"sort"
 	"time"
 
 	"github.com/defenseunicorns/go-oscal/src/pkg/uuid"
-	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
+	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/config"
 	"github.com/defenseunicorns/lula/src/pkg/common"
 	"github.com/defenseunicorns/lula/src/pkg/common/result"
@@ -18,31 +19,123 @@ import (
 const OSCAL_VERSION = "1.1.2"
 
 type EvalResult struct {
-	Threshold *oscalTypes_1_1_2.Result
-	Results   []*oscalTypes_1_1_2.Result
-	Latest    *oscalTypes_1_1_2.Result
+	Threshold *oscalTypes.Result
+	Results   []*oscalTypes.Result
+	Latest    *oscalTypes.Result
+}
+
+type AssessmentResult struct {
+	Model     *oscalTypes.AssessmentResults
+	ModelType string
+}
+
+func (ar AssessmentResult) GetType() string {
+	return "assessment-result"
+}
+
+func (ar AssessmentResult) GetCompleteModel() *oscalTypes.OscalModels {
+	return &oscalTypes.OscalModels{
+		AssessmentResults: ar.Model,
+	}
+}
+
+func (ar AssessmentResult) MakeDeterministic() {
+	// Sort Results
+	slices.SortFunc(ar.Model.Results, func(a, b oscalTypes.Result) int { return b.Start.Compare(a.Start) })
+
+	for _, result := range ar.Model.Results {
+		// sort findings by target id
+		if result.Findings != nil {
+			findings := *result.Findings
+			sort.Slice(findings, func(i, j int) bool {
+				return findings[i].Target.TargetId < findings[j].Target.TargetId
+			})
+			result.Findings = &findings
+		}
+		// sort observations by collected time
+		if result.Observations != nil {
+			observations := *result.Observations
+			slices.SortFunc(observations, func(a, b oscalTypes.Observation) int { return a.Collected.Compare(b.Collected) })
+			result.Observations = &observations
+		}
+
+		// Sort the include-controls in the control selections
+		controlSelections := result.ReviewedControls.ControlSelections
+		for _, selection := range controlSelections {
+			if selection.IncludeControls != nil {
+				controls := *selection.IncludeControls
+				sort.Slice(controls, func(i, j int) bool {
+					return controls[i].ControlId < controls[j].ControlId
+				})
+				selection.IncludeControls = &controls
+			}
+		}
+	}
+
+	// sort backmatter
+	if ar.Model.BackMatter != nil {
+		backmatter := *ar.Model.BackMatter
+		if backmatter.Resources != nil {
+			resources := *backmatter.Resources
+			sort.Slice(resources, func(i, j int) bool {
+				return resources[i].Title < resources[j].Title
+			})
+			backmatter.Resources = &resources
+		}
+		ar.Model.BackMatter = &backmatter
+	}
+}
+
+func (ar AssessmentResult) HandleExisting(filepath string) error {
+	exists, err := common.CheckFileExists(filepath)
+	if err != nil {
+		return err
+	}
+	if exists {
+		existingFileBytes, err := os.ReadFile(filepath)
+		if err != nil {
+			return err
+		}
+		existingAr, err := NewAssessmentResults(existingFileBytes)
+		if err != nil {
+			return err
+		}
+		// Now merge
+		ar.Model, err = MergeAssessmentResults(existingAr.Model, ar.Model)
+		if err != nil {
+			return err
+		}
+		return nil
+	} else {
+		return nil
+	}
 }
 
 // NewAssessmentResults creates a new assessment results object from the given data.
-func NewAssessmentResults(data []byte) (*oscalTypes_1_1_2.AssessmentResults, error) {
-	var oscalModels oscalTypes_1_1_2.OscalModels
+func NewAssessmentResults(data []byte) (AssessmentResult, error) {
+	var assessment AssessmentResult
+
+	var oscalModels oscalTypes.OscalModels
 
 	err := multiModelValidate(data)
 	if err != nil {
-		return nil, err
+		return assessment, err
 	}
 
 	err = yaml.Unmarshal(data, &oscalModels)
 	if err != nil {
 		fmt.Printf("Error marshalling yaml: %s\n", err.Error())
-		return nil, err
+		return assessment, err
 	}
 
-	return oscalModels.AssessmentResults, nil
+	assessment.Model = oscalModels.AssessmentResults
+	assessment.ModelType = "assessment-result"
+
+	return assessment, nil
 }
 
-func GenerateAssessmentResults(results []oscalTypes_1_1_2.Result) (*oscalTypes_1_1_2.AssessmentResults, error) {
-	var assessmentResults = &oscalTypes_1_1_2.AssessmentResults{}
+func GenerateAssessmentResults(results []oscalTypes.Result) (*oscalTypes.AssessmentResults, error) {
+	var assessmentResults = &oscalTypes.AssessmentResults{}
 
 	// Single time used for all time related fields
 	rfc3339Time := time.Now()
@@ -52,7 +145,7 @@ func GenerateAssessmentResults(results []oscalTypes_1_1_2.Result) (*oscalTypes_1
 
 	// Create metadata object with requires fields and a few extras
 	// Where do we establish what `version` should be?
-	assessmentResults.Metadata = oscalTypes_1_1_2.Metadata{
+	assessmentResults.Metadata = oscalTypes.Metadata{
 		Title:        "[System Name] Security Assessment Results (SAR)",
 		Version:      "0.0.1",
 		OscalVersion: OSCAL_VERSION,
@@ -67,7 +160,7 @@ func GenerateAssessmentResults(results []oscalTypes_1_1_2.Result) (*oscalTypes_1
 	return assessmentResults, nil
 }
 
-func MergeAssessmentResults(original *oscalTypes_1_1_2.AssessmentResults, latest *oscalTypes_1_1_2.AssessmentResults) (*oscalTypes_1_1_2.AssessmentResults, error) {
+func MergeAssessmentResults(original *oscalTypes.AssessmentResults, latest *oscalTypes.AssessmentResults) (*oscalTypes.AssessmentResults, error) {
 	// If UUID's are matching - this must be a prop update for threshold
 	// This is used during evaluate to update the threshold prop automatically
 	if original.UUID == latest.UUID {
@@ -76,7 +169,7 @@ func MergeAssessmentResults(original *oscalTypes_1_1_2.AssessmentResults, latest
 
 	original.Results = append(original.Results, latest.Results...)
 
-	slices.SortFunc(original.Results, func(a, b oscalTypes_1_1_2.Result) int { return b.Start.Compare(a.Start) })
+	slices.SortFunc(original.Results, func(a, b oscalTypes.Result) int { return b.Start.Compare(a.Start) })
 	// Update pertinent information
 	original.Metadata.LastModified = time.Now()
 	original.UUID = uuid.NewUUID()
@@ -84,7 +177,7 @@ func MergeAssessmentResults(original *oscalTypes_1_1_2.AssessmentResults, latest
 	return original, nil
 }
 
-func EvaluateResults(thresholdResult *oscalTypes_1_1_2.Result, newResult *oscalTypes_1_1_2.Result) (bool, map[string]result.ResultComparisonMap, error) {
+func EvaluateResults(thresholdResult *oscalTypes.Result, newResult *oscalTypes.Result) (bool, map[string]result.ResultComparisonMap, error) {
 	var status bool = true
 
 	if thresholdResult.Findings == nil || newResult.Findings == nil {
@@ -163,60 +256,11 @@ func EvaluateResults(thresholdResult *oscalTypes_1_1_2.Result, newResult *oscalT
 	return status, categorizedResultComparisons, nil
 }
 
-func MakeAssessmentResultsDeterministic(assessment *oscalTypes_1_1_2.AssessmentResults) {
-
-	// Sort Results
-	slices.SortFunc(assessment.Results, func(a, b oscalTypes_1_1_2.Result) int { return b.Start.Compare(a.Start) })
-
-	for _, result := range assessment.Results {
-		// sort findings by target id
-		if result.Findings != nil {
-			findings := *result.Findings
-			sort.Slice(findings, func(i, j int) bool {
-				return findings[i].Target.TargetId < findings[j].Target.TargetId
-			})
-			result.Findings = &findings
-		}
-		// sort observations by collected time
-		if result.Observations != nil {
-			observations := *result.Observations
-			slices.SortFunc(observations, func(a, b oscalTypes_1_1_2.Observation) int { return a.Collected.Compare(b.Collected) })
-			result.Observations = &observations
-		}
-
-		// Sort the include-controls in the control selections
-		controlSelections := result.ReviewedControls.ControlSelections
-		for _, selection := range controlSelections {
-			if selection.IncludeControls != nil {
-				controls := *selection.IncludeControls
-				sort.Slice(controls, func(i, j int) bool {
-					return controls[i].ControlId < controls[j].ControlId
-				})
-				selection.IncludeControls = &controls
-			}
-		}
-	}
-
-	// sort backmatter
-	if assessment.BackMatter != nil {
-		backmatter := *assessment.BackMatter
-		if backmatter.Resources != nil {
-			resources := *backmatter.Resources
-			sort.Slice(resources, func(i, j int) bool {
-				return resources[i].Title < resources[j].Title
-			})
-			backmatter.Resources = &resources
-		}
-		assessment.BackMatter = &backmatter
-	}
-
-}
-
 // findAndSortResults takes a map of results and returns a list of thresholds and a sorted list of results in order of time
-func findAndSortResults(resultMap map[string]*oscalTypes_1_1_2.AssessmentResults) ([]*oscalTypes_1_1_2.Result, []*oscalTypes_1_1_2.Result) {
+func findAndSortResults(resultMap map[string]*oscalTypes.AssessmentResults) ([]*oscalTypes.Result, []*oscalTypes.Result) {
 
-	thresholds := make([]*oscalTypes_1_1_2.Result, 0)
-	sortedResults := make([]*oscalTypes_1_1_2.Result, 0)
+	thresholds := make([]*oscalTypes.Result, 0)
+	sortedResults := make([]*oscalTypes.Result, 0)
 
 	for _, assessment := range resultMap {
 		for _, result := range assessment.Results {
@@ -233,15 +277,15 @@ func findAndSortResults(resultMap map[string]*oscalTypes_1_1_2.AssessmentResults
 	}
 
 	// Sort the results by start time
-	slices.SortFunc(sortedResults, func(a, b *oscalTypes_1_1_2.Result) int { return a.Start.Compare(b.Start) })
-	slices.SortFunc(thresholds, func(a, b *oscalTypes_1_1_2.Result) int { return a.Start.Compare(b.Start) })
+	slices.SortFunc(sortedResults, func(a, b *oscalTypes.Result) int { return a.Start.Compare(b.Start) })
+	slices.SortFunc(thresholds, func(a, b *oscalTypes.Result) int { return a.Start.Compare(b.Start) })
 
 	return thresholds, sortedResults
 }
 
 // filterResults consumes many assessment-results objects and builds out a map of EvalResults filtered by target
 // this function looks at the target prop as the key in the map
-func FilterResults(resultMap map[string]*oscalTypes_1_1_2.AssessmentResults) map[string]EvalResult {
+func FilterResults(resultMap map[string]*oscalTypes.AssessmentResults) map[string]EvalResult {
 	evalResultMap := make(map[string]EvalResult)
 
 	for _, assessment := range resultMap {
@@ -270,7 +314,7 @@ func FilterResults(resultMap map[string]*oscalTypes_1_1_2.AssessmentResults) map
 					evalResult = tmpResult
 				} else {
 					// EvalResult Does Not Exist - create
-					results := make([]*oscalTypes_1_1_2.Result, 0)
+					results := make([]*oscalTypes.Result, 0)
 					results = append(results, &result)
 					tmpResult = EvalResult{
 						Results: results,
@@ -296,7 +340,7 @@ func FilterResults(resultMap map[string]*oscalTypes_1_1_2.AssessmentResults) map
 	// Now that all results are processed - iterate through each EvalResult, sort and assign latest/threshold
 	for key, evalResult := range evalResultMap {
 		if len(evalResult.Results) > 0 {
-			slices.SortFunc(evalResult.Results, func(a, b *oscalTypes_1_1_2.Result) int { return a.Start.Compare(b.Start) })
+			slices.SortFunc(evalResult.Results, func(a, b *oscalTypes.Result) int { return a.Start.Compare(b.Start) })
 			evalResult.Latest = evalResult.Results[len(evalResult.Results)-1]
 			if evalResult.Threshold == nil && len(evalResult.Results) > 1 {
 				// length of results > 1 and no established threshold - set threshold to the preceding result of latest
@@ -311,11 +355,11 @@ func FilterResults(resultMap map[string]*oscalTypes_1_1_2.AssessmentResults) map
 }
 
 // Helper function to create observation
-func CreateObservation(method string, relevantEvidence *[]oscalTypes_1_1_2.RelevantEvidence, validation *types.LulaValidation, resourcesHref string, descriptionPattern string, descriptionArgs ...any) oscalTypes_1_1_2.Observation {
+func CreateObservation(method string, relevantEvidence *[]oscalTypes.RelevantEvidence, validation *types.LulaValidation, resourcesHref string, descriptionPattern string, descriptionArgs ...any) oscalTypes.Observation {
 	rfc3339Time := time.Now()
 	observationUuid := uuid.NewUUID()
 
-	observation := oscalTypes_1_1_2.Observation{
+	observation := oscalTypes.Observation{
 		Collected:        rfc3339Time,
 		Methods:          []string{method},
 		UUID:             observationUuid,
@@ -324,14 +368,14 @@ func CreateObservation(method string, relevantEvidence *[]oscalTypes_1_1_2.Relev
 	}
 	// TODO: should the props be added regardless?
 	if resourcesHref != "" {
-		observation.Props = &[]oscalTypes_1_1_2.Property{
+		observation.Props = &[]oscalTypes.Property{
 			{
 				Name:  "validation",
 				Ns:    "https://docs.lula.dev/oscal/ns",
 				Value: common.AddIdPrefix(validation.UUID),
 			},
 		}
-		observation.Links = &[]oscalTypes_1_1_2.Link{
+		observation.Links = &[]oscalTypes.Link{
 			{
 				Href: resourcesHref,
 				Rel:  "lula.resources",
@@ -342,23 +386,23 @@ func CreateObservation(method string, relevantEvidence *[]oscalTypes_1_1_2.Relev
 }
 
 // Creates a result from findings and observations
-func CreateResult(findingMap map[string]oscalTypes_1_1_2.Finding, observations []oscalTypes_1_1_2.Observation) (oscalTypes_1_1_2.Result, error) {
+func CreateResult(findingMap map[string]oscalTypes.Finding, observations []oscalTypes.Observation) (oscalTypes.Result, error) {
 
 	// Single time used for all time related fields
 	rfc3339Time := time.Now()
-	controlList := make([]oscalTypes_1_1_2.AssessedControlsSelectControlById, 0)
-	findings := make([]oscalTypes_1_1_2.Finding, 0)
+	controlList := make([]oscalTypes.AssessedControlsSelectControlById, 0)
+	findings := make([]oscalTypes.Finding, 0)
 
 	// Convert control map to slice of SelectControlById
 	for controlId, finding := range findingMap {
-		control := oscalTypes_1_1_2.AssessedControlsSelectControlById{
+		control := oscalTypes.AssessedControlsSelectControlById{
 			ControlId: controlId,
 		}
 		controlList = append(controlList, control)
 		findings = append(findings, finding)
 	}
 
-	props := []oscalTypes_1_1_2.Property{
+	props := []oscalTypes.Property{
 		{
 			Ns:    LULA_NAMESPACE,
 			Name:  "threshold",
@@ -366,16 +410,16 @@ func CreateResult(findingMap map[string]oscalTypes_1_1_2.Finding, observations [
 		},
 	}
 
-	result := oscalTypes_1_1_2.Result{
+	result := oscalTypes.Result{
 		UUID:        uuid.NewUUID(),
 		Title:       "Lula Validation Result",
 		Start:       rfc3339Time,
 		Description: "Assessment results for performing Validations with Lula version " + config.CLIVersion,
 		Props:       &props,
-		ReviewedControls: oscalTypes_1_1_2.ReviewedControls{
+		ReviewedControls: oscalTypes.ReviewedControls{
 			Description: "Controls validated",
 			Remarks:     "Validation performed may indicate full or partial satisfaction",
-			ControlSelections: []oscalTypes_1_1_2.AssessedControls{
+			ControlSelections: []oscalTypes.AssessedControls{
 				{
 					Description:     "Controls Assessed by Lula",
 					IncludeControls: &controlList,
