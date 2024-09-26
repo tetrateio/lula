@@ -6,6 +6,7 @@ import (
 
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/cmd/common"
+	pkgCommon "github.com/defenseunicorns/lula/src/pkg/common"
 	"github.com/defenseunicorns/lula/src/pkg/common/network"
 	"github.com/defenseunicorns/lula/src/pkg/common/oscal"
 	"github.com/defenseunicorns/lula/src/pkg/message"
@@ -130,27 +131,50 @@ var generateComponentCmd = &cobra.Command{
 
 func GenerateProfileCommand() *cobra.Command {
 	var (
-		source  string
-		include []string
-		exclude []string
+		source     string
+		outputFile string
+		include    []string
+		exclude    []string
 	)
 
 	cmd := &cobra.Command{
-		Use:     "assessment-plan",
-		Aliases: []string{"ap"},
+		Use:     "profile",
+		Aliases: []string{"p"},
 		Args:    cobra.MaximumNArgs(1),
-		Short:   "Generate an assessment plan OSCAL template",
-		Run: func(_ *cobra.Command, args []string) {
-			message.Info("generate assessment-plan executed")
+		Short:   "Generate an profile OSCAL template",
+		RunE: func(_ *cobra.Command, args []string) error {
+			message.Info("generate profile executed")
 
-			// For each component-definition in array of component-definitions
-			// Read component-definition
-			// Collect all implemented-requirements
-			// Collect all items from the backmatter
-			// Create new assessment-plan object
-			// Transfer to assessment-plan.reviewed-controls?
+			// pre-check if the output file exists
+			exists, err := pkgCommon.CheckFileExists(outputFile)
+			if err != nil {
+				return err
+			}
+
+			if exists {
+				return fmt.Errorf("Output File %s currently exist - cannot merge artifacts\n", outputFile)
+			}
+
+			profile, err := oscal.GenerateProfile(source, include, exclude)
+			if err != nil {
+				return err
+			}
+
+			// Write the component definition to file
+			err = oscal.WriteOscalModelNew(outputFile, profile)
+			if err != nil {
+				message.Fatalf(err, "error writing component to file")
+			}
+
+			return nil
 		},
 	}
+
+	cmd.Flags().StringVarP(&source, "source", "s", "", "the path to the source catalog/profile")
+	cmd.MarkFlagRequired("source")
+	cmd.Flags().StringVarP(&outputFile, "output-file", "o", "", "the path to the output file. If not specified, the output file will be directed to stdout")
+	cmd.Flags().StringSliceVarP(&include, "include", "i", []string{}, "comma delimited list of controls to include from the source catalog/profile")
+	cmd.Flags().StringSliceVarP(&exclude, "exclude", "e", []string{}, "comma delimited list of controls to exclude from the source catalog/profile")
 
 	return cmd
 }
@@ -207,6 +231,7 @@ func init() {
 	common.InitViper()
 
 	generateCmd.AddCommand(generateComponentCmd)
+	generateCmd.AddCommand(GenerateProfileCommand())
 	// generateCmd.AddCommand(generateAssessmentPlanCmd)
 	// generateCmd.AddCommand(generateSystemSecurityPlanCmd)
 	// generateCmd.AddCommand(generatePOAMCmd)
