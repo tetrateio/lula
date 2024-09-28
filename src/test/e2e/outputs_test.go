@@ -45,17 +45,17 @@ func TestOutputs(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			compDef, err := oscal.NewOscalComponentDefinition(data)
+			compDef, err := oscal.NewComponentDefinition(data)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if compDef.Components == nil {
+			if compDef.Model.Components == nil {
 				t.Fatal("Expected non-nil components")
 			}
 
-			components := *compDef.Components
-			validationStore := validationstore.NewValidationStoreFromBackMatter(*compDef.BackMatter)
+			components := *compDef.Model.Components
+			validationStore := validationstore.NewValidationStoreFromBackMatter(*compDef.Model.BackMatter)
 
 			findingMap, observations, err := validate.ValidateOnControlImplementations(components[0].ControlImplementations, validationStore, "")
 			if err != nil {

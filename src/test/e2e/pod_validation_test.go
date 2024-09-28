@@ -298,11 +298,11 @@ func validatePodLabelPass(ctx context.Context, t *testing.T, config *envconf.Con
 	}
 
 	// The number of results in the file should be more than initially
-	if len(tempAssessment.Results) <= initialResultCount {
+	if len(tempAssessment.Model.Results) <= initialResultCount {
 		t.Fatal("Failed to append results to existing report")
 	}
 
-	if resultId != tempAssessment.Results[0].UUID {
+	if resultId != tempAssessment.Model.Results[0].UUID {
 		t.Fatal("Failed to prepend results to existing report")
 	}
 

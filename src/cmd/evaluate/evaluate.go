@@ -246,7 +246,7 @@ func readManyAssessmentResults(fileArray []string) (map[string]*oscalTypes_1_1_2
 		if err != nil {
 			return nil, err
 		}
-		assessmentMap[fileString] = assessment
+		assessmentMap[fileString] = assessment.Model
 	}
 
 	return assessmentMap, nil

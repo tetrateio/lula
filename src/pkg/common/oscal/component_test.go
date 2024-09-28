@@ -110,12 +110,12 @@ func TestNewOscalComponentDefinition(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := oscal.NewOscalComponentDefinition(tt.data)
+			got, err := oscal.NewComponentDefinition(tt.data)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewOscalComponentDefinition() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) && !tt.wantErr {
+			if !reflect.DeepEqual(got.Model, tt.want) && !tt.wantErr {
 				t.Errorf("NewOscalComponentDefinition() got = %v, want %v", got, tt.want)
 			}
 		})
@@ -289,10 +289,10 @@ func TestMergeComponentDefinitions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			validComponent, _ := oscal.NewOscalComponentDefinition(validBytes)
+			validComponent, _ := oscal.NewComponentDefinition(validBytes)
 
 			// Get the implemented requirements from existing for comparison
-			existingComponent := (*validComponent.Components)[0]
+			existingComponent := (*validComponent.Model.Components)[0]
 			existingControlImplementation := (*existingComponent.ControlImplementations)[0]
 			existingImplementedRequirementsMap := make(map[string]bool)
 			for _, req := range existingControlImplementation.ImplementedRequirements {
@@ -301,7 +301,7 @@ func TestMergeComponentDefinitions(t *testing.T) {
 
 			generated, _ := oscal.ComponentFromCatalog("Mock Command", tt.source, catalog, tt.title, tt.requirements, tt.remarks, "impact")
 
-			merged, err := oscal.MergeComponentDefinitions(validComponent, generated)
+			merged, err := oscal.MergeComponentDefinitions(validComponent.Model, generated)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MergeComponentDefinitions() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -499,13 +499,13 @@ func TestControlImplementationsToRequirementsMap(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := loadTestData(t, tt.filepath)
-			compdef, err := oscal.NewOscalComponentDefinition(data)
+			compdef, err := oscal.NewComponentDefinition(data)
 
 			if err != nil {
 				t.Errorf("Expected NewOscalComponentDefinition to execute")
 			}
 
-			controlMap := oscal.FilterControlImplementations(compdef)
+			controlMap := oscal.FilterControlImplementations(compdef.Model)
 			var count int
 			// range over the control map and determine total items
 			for _, controlImp := range controlMap {
@@ -543,13 +543,13 @@ func TestFilterControlImplementations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := loadTestData(t, tt.filepath)
-			compdef, err := oscal.NewOscalComponentDefinition(data)
+			compdef, err := oscal.NewComponentDefinition(data)
 
 			if err != nil {
 				t.Errorf("Expected NewOscalComponentDefinition to execute")
 			}
 
-			controlMap := oscal.FilterControlImplementations(compdef)
+			controlMap := oscal.FilterControlImplementations(compdef.Model)
 			// Now validate the existence of items in the controlMap
 
 			if len(controlMap) != tt.mapLength {

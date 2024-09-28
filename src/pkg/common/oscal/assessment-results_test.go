@@ -535,7 +535,11 @@ func TestMakeAssessmentResultsDeterministic(t *testing.T) {
 		Results: results,
 	}
 
-	oscal.MakeAssessmentResultsDeterministic(&assessment)
+	var assessmentResult = oscal.AssessmentResult{
+		Model: &assessment,
+	}
+
+	assessmentResult.MakeDeterministic()
 
 	if len(assessment.Results) < 2 {
 		t.Fatalf("Expected 2 results, got %d", len(assessment.Results))

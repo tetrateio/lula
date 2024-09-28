@@ -25,8 +25,7 @@ type EvalResult struct {
 }
 
 type AssessmentResult struct {
-	Model     *oscalTypes.AssessmentResults
-	ModelType string
+	Model *oscalTypes.AssessmentResults
 }
 
 func (ar AssessmentResult) GetType() string {
@@ -129,7 +128,6 @@ func NewAssessmentResults(data []byte) (AssessmentResult, error) {
 	}
 
 	assessment.Model = oscalModels.AssessmentResults
-	assessment.ModelType = "assessment-result"
 
 	return assessment, nil
 }
