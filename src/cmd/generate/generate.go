@@ -145,6 +145,10 @@ func GenerateProfileCommand() *cobra.Command {
 		RunE: func(_ *cobra.Command, args []string) error {
 			message.Info("generate profile executed")
 
+			if outputFile == "" {
+				outputFile = "profile.yaml"
+			}
+
 			// pre-check if the output file exists
 			exists, err := pkgCommon.CheckFileExists(outputFile)
 			if err != nil {

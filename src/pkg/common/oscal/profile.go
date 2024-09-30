@@ -2,6 +2,7 @@ package oscal
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/defenseunicorns/go-oscal/src/pkg/uuid"
@@ -26,6 +27,42 @@ func (p Profile) GetCompleteModel() *oscalTypes.OscalModels {
 }
 
 func (p Profile) MakeDeterministic() {
+
+	// sort the import items by source string
+	importItems := p.Model.Imports
+
+	sort.Slice(importItems, func(i, j int) bool {
+		return importItems[i].Href < importItems[j].Href
+	})
+
+	// Does not handle pattern matching
+	for _, item := range importItems {
+
+		// Shouldn't be both but we can still handle the scenario
+		if item.IncludeControls != nil {
+			includeControls := *item.IncludeControls
+			for _, includeControl := range includeControls {
+				includes := *includeControl.WithIds
+				sort.Slice(includes, func(i, j int) bool {
+					return includes[i] < includes[j]
+				})
+				includeControl.WithIds = &includes
+			}
+		}
+
+		if item.ExcludeControls != nil {
+			excludeControls := *item.ExcludeControls
+			for _, excludeControl := range excludeControls {
+				exclude := *excludeControl.WithIds
+				sort.Slice(exclude, func(i, j int) bool {
+					return exclude[i] < exclude[j]
+				})
+				excludeControl.WithIds = &exclude
+			}
+		}
+
+	}
+
 	return
 }
 
@@ -103,7 +140,7 @@ func GenerateProfile(source string, include []string, exclude []string) (profile
 		Href: source,
 	}
 
-	// We're going to assume oscal would support both for the moment
+	// Handle the inclusion of both before passed into this function
 	if len(include) > 0 {
 		importItem.IncludeControls = &includedControls
 	}
@@ -114,6 +151,11 @@ func GenerateProfile(source string, include []string, exclude []string) (profile
 
 	model.Imports = []oscalTypes.Import{
 		importItem,
+	}
+
+	// Static allocation of the merge setting until other use-cases are identified
+	model.Merge = &oscalTypes.Merge{
+		AsIs: true,
 	}
 
 	profile.Model = &model

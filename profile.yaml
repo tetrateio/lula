@@ -1,0 +1,18 @@
+profile:
+  imports:
+    - href: https://raw.githubusercontent.com/GSA/fedramp-automation/refs/tags/fedramp-2.0.0-oscal-1.0.4/dist/content/rev5/baselines/json/FedRAMP_rev5_HIGH-baseline-resolved-profile_catalog.json
+      include-controls:
+        - with-ids:
+            - ac-1
+            - ac-2
+            - ac-4
+  merge:
+    as-is: true
+  metadata:
+    last-modified: 2024-09-30T23:22:25.08701925Z
+    oscal-version: 1.1.2
+    published: 2024-09-30T23:22:25.08701925Z
+    remarks: Profile generated from Lula
+    title: Profile
+    version: 0.0.1
+  uuid: 173a72c6-2fd1-49e8-b58f-ca00e057ab13
