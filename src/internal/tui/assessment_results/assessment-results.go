@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
-	"github.com/charmbracelet/bubbles/key"
 	blist "github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/internal/tui/common"
+	"github.com/evertras/bubble-table/table"
 )
 
 const (
@@ -21,6 +21,14 @@ const (
 	pickerHeight     = 20
 	pickerWidth      = 80
 	dialogFixedWidth = 40
+)
+
+const (
+	resultPicker         common.PickerKind = "result"
+	comparedResultPicker common.PickerKind = "compared result"
+	columnKeyName                          = "name"
+	columnKeyStatus                        = "status"
+	columnKeyDescription                   = "description"
 )
 
 func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentResults) Model {
@@ -33,29 +41,36 @@ func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentRes
 			var findingsRows []table.Row
 			var observationsRows []table.Row
 			for _, f := range *r.Findings {
-				findingsRows = append(findingsRows, table.Row{f.Target.TargetId, f.Target.Status.State, f.Description})
+				findingsRows = append(findingsRows, table.NewRow(table.RowData{
+					columnKeyName:        f.Target.TargetId,
+					columnKeyStatus:      f.Target.Status.State,
+					columnKeyDescription: strings.ReplaceAll(f.Description, "\n", " ")}))
 			}
 			for _, o := range *r.Observations {
 				state := "undefined"
 				var remarks strings.Builder
 				if o.RelevantEvidence != nil {
-					for _, re := range *o.RelevantEvidence {
-						if re.Description == "Result: satisfied\n" {
+					for _, e := range *o.RelevantEvidence {
+						if e.Description == "Result: satisfied\n" {
 							state = "satisfied"
-						} else if re.Description == "Result: not-satisfied\n" {
+						} else if e.Description == "Result: not-satisfied\n" {
 							state = "not-satisfied"
 						}
-						if re.Remarks != "" {
-							remarks.WriteString(re.Remarks)
+						if e.Remarks != "" {
+							remarks.WriteString(strings.ReplaceAll(e.Remarks, "\n", " "))
 						}
 					}
 				}
-				observationsRows = append(observationsRows, table.Row{o.Description, state, remarks.String()})
+				observationsRows = append(observationsRows, table.NewRow(table.RowData{
+					columnKeyName:        o.Description,
+					columnKeyStatus:      state,
+					columnKeyDescription: remarks.String()}))
 			}
 
 			results = append(results, result{
 				uuid:             r.UUID,
 				title:            r.Title,
+				timestamp:        r.Start.Format(time.RFC3339),
 				findings:         r.Findings,
 				observations:     r.Observations,
 				findingsRows:     findingsRows,
@@ -63,6 +78,9 @@ func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentRes
 			})
 		}
 	}
+
+	// TODO - fix this so that findings table is associated to the selected result; also results table
+	// possibly need to add another table type for the "comparison" table
 	if len(results) != 0 {
 		selectedResult = results[0]
 		observationMap := makeObservationMap(selectedResult.observations)
@@ -89,48 +107,50 @@ func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentRes
 		}
 	}
 
-	resultsPicker := viewport.New(pickerWidth, pickerHeight)
-	resultsPicker.Style = common.OverlayStyle
+	resultItems := make([]string, len(results))
+	for i, c := range results {
+		resultItems[i] = getResultText(c)
+	}
+	resultsPicker := common.NewPickerModel("Select a Result", resultPicker, resultItems, 0)
 
-	f := blist.New(findings, common.NewUnfocusedDelegate(), width, height)
-	findingPicker := viewport.New(width, height)
-	findingPicker.Style = common.PanelStyle
+	comparedResultItems := getComparedResults(results, selectedResult)
+	comparedResultsPicker := common.NewPickerModel("Select a Result to Compare", comparedResultPicker, comparedResultItems, 0)
 
-	findingSummary := viewport.New(width, height)
-	findingSummary.Style = common.PanelStyle
-	observationSummary := viewport.New(width, height)
-	observationSummary.Style = common.PanelStyle
+	findingsSummary := viewport.New(width, height)
+	findingsSummary.Style = common.PanelStyle
+	observationsSummary := viewport.New(width, height)
+	observationsSummary.Style = common.PanelStyle
 
 	help := common.NewHelpModel(false)
 	help.OneLine = true
-	help.ShortHelp = []key.Binding{assessmentHotkeys.Help}
+	help.ShortHelp = shortHelpNoFocus
 
-	findingsTable := table.New(
-		table.WithRows(selectedResult.findingsRows),
-		table.WithColumns([]table.Column{{Title: "Control", Width: 10}, {Title: "Status", Width: 10}, {Title: "Description", Width: 40}}),
-		table.WithHeight(20),
-	)
+	findingsTableColumns := []table.Column{
+		table.NewFlexColumn(columnKeyName, "Control", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyStatus, "Status", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyDescription, "Description", 4),
+	}
 
-	observationsTable := table.New(
-		table.WithRows(selectedResult.observationsRows),
-		table.WithColumns([]table.Column{{Title: "Observation", Width: 10}, {Title: "Status", Width: 10}, {Title: "Remarks", Width: 40}}),
-		table.WithHeight(20),
-	)
-	// findingsTable.SetStyles()
-	// TODO: update table height and width - findingsTable.SetHeight()
+	observationsTableColumns := []table.Column{
+		table.NewFlexColumn(columnKeyName, "Observation", 2).WithFiltered(true),
+		table.NewFlexColumn(columnKeyStatus, "Status", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyDescription, "Remarks", 3),
+	}
+
+	findingsTable := table.New(findingsTableColumns).WithRows(selectedResult.findingsRows).Filtered(true)
+	observationsTable := table.New(observationsTableColumns).WithRows(selectedResult.observationsRows).Filtered(true)
 
 	return Model{
-		keys:               assessmentHotkeys,
-		help:               help,
-		results:            results,
-		resultsPicker:      resultsPicker,
-		selectedResult:     selectedResult,
-		findings:           f,
-		findingsTable:      findingsTable,
-		findingPicker:      findingPicker,
-		findingSummary:     findingSummary,
-		observationsTable:  observationsTable,
-		observationSummary: observationSummary,
+		keys:                  assessmentKeys,
+		help:                  help,
+		results:               results,
+		resultsPicker:         resultsPicker,
+		comparedResultsPicker: comparedResultsPicker,
+		selectedResult:        selectedResult,
+		findingsTable:         findingsTable,
+		findingsSummary:       findingsSummary,
+		observationsTable:     observationsTable,
+		observationsSummary:   observationsSummary,
 	}
 }
 
@@ -148,80 +168,81 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if m.open {
+			common.DumpToLog(msg)
 			k := msg.String()
 			switch k {
-
-			case common.ContainsKey(k, m.keys.Quit.Keys()):
-				return m, tea.Quit
-
 			case common.ContainsKey(k, m.keys.Help.Keys()):
 				m.help.ShowAll = !m.help.ShowAll
 
 			case common.ContainsKey(k, m.keys.NavigateLeft.Keys()):
-				if m.focus == 0 {
-					m.focus = maxFocus
-				} else {
-					m.focus--
+				if !m.resultsPicker.Open && !m.comparedResultsPicker.Open {
+					if m.focus == 0 {
+						m.focus = maxFocus
+					} else {
+						m.focus--
+					}
+					m.updateKeyBindings()
 				}
-				m.updateKeyBindings()
 
 			case common.ContainsKey(k, m.keys.NavigateRight.Keys()):
-				m.focus = (m.focus + 1) % (maxFocus + 1)
-				m.updateKeyBindings()
-
-			case common.ContainsKey(k, m.keys.Up.Keys()):
-				if m.inResultOverlay && m.selectedResultIndex > 0 {
-					m.selectedResultIndex--
-					m.resultsPicker.SetContent(m.updateViewportContent("view"))
-				}
-
-			case common.ContainsKey(k, m.keys.Down.Keys()):
-				if m.inResultOverlay && m.selectedResultIndex < len(m.results)-1 {
-					m.selectedResultIndex++
-					m.resultsPicker.SetContent(m.updateViewportContent("view"))
+				if !m.resultsPicker.Open && !m.comparedResultsPicker.Open {
+					m.focus = (m.focus + 1) % (maxFocus + 1)
+					m.updateKeyBindings()
 				}
 
 			case common.ContainsKey(k, m.keys.Confirm.Keys()):
-				if m.focus == focusResultSelection {
-					if m.inResultOverlay {
-						if len(m.results) > 1 {
-							m.selectedResult = m.results[m.selectedResultIndex]
+				switch m.focus {
+				case focusResultSelection:
+					if len(m.results) > 1 && !m.resultsPicker.Open {
+						return m, func() tea.Msg {
+							return common.PickerOpenMsg{
+								Kind: resultPicker,
+							}
 						}
-						m.inResultOverlay = false
-					} else {
-						m.inResultOverlay = true
-						m.resultsPicker.SetContent(m.updateViewportContent("view"))
 					}
-				} else if m.focus == focusCompareSelection {
-					if m.inResultOverlay {
-						if len(m.results) > 1 {
-							m.compareResult = m.results[m.selectedResultIndex]
-						}
-						m.inResultOverlay = false
-					} else {
-						m.inResultOverlay = true
-						m.resultsPicker.SetContent(m.updateViewportContent("compare"))
-					}
-				} else if m.focus == focusFindings {
-					m.findingSummary.SetContent(m.renderSummary())
-				}
 
-			case common.ContainsKey(k, m.keys.Cancel.Keys()):
-				if m.inResultOverlay {
-					m.inResultOverlay = false
+				case focusCompareSelection:
+					if len(m.results) > 1 && m.comparedResultsPicker.Open {
+						return m, func() tea.Msg {
+							return common.PickerOpenMsg{
+								Kind: comparedResultPicker,
+							}
+						}
+					}
+
+				case focusSummary:
+					// do stuff
+					// Update the selected findings, update the observations table
+					// If 'd', pull up detailed view
+
 				}
 			}
 		}
 	}
-	m.findings, cmd = m.findings.Update(msg)
+
+	mdl, cmd := m.resultsPicker.Update(msg)
+	m.resultsPicker = mdl.(common.PickerModel)
+	cmds = append(cmds, cmd)
+
+	mdl, cmd = m.comparedResultsPicker.Update(msg)
+	m.comparedResultsPicker = mdl.(common.PickerModel)
+	cmds = append(cmds, cmd)
+
+	m.findingsTable, cmd = m.findingsTable.Update(msg)
+	cmds = append(cmds, cmd)
+
+	m.observationsTable, cmd = m.observationsTable.Update(msg)
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
 }
 
 func (m Model) View() string {
-	if m.inResultOverlay {
+	if m.resultsPicker.Open {
 		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, m.resultsPicker.View(), lipgloss.WithWhitespaceChars(" "))
+	}
+	if m.comparedResultsPicker.Open {
+		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, m.comparedResultsPicker.View(), lipgloss.WithWhitespaceChars(" "))
 	}
 	return m.mainView()
 }
@@ -237,9 +258,7 @@ func (m Model) mainView() string {
 	focusedDialogBox := common.DialogBoxStyle.BorderForeground(common.Focused)
 
 	selectedResultDialogBox := common.DialogBoxStyle
-	compareResultDialogBox := common.DialogBoxStyle
-	findingsViewport := common.PanelStyle
-	findingsViewportHeader := common.Highlight
+	comparedResultDialogBox := common.DialogBoxStyle
 	summaryViewport := common.PanelStyle
 	summaryViewportHeader := common.Highlight
 	observationsViewport := common.PanelStyle
@@ -249,10 +268,7 @@ func (m Model) mainView() string {
 	case focusResultSelection:
 		selectedResultDialogBox = focusedDialogBox
 	case focusCompareSelection:
-		compareResultDialogBox = focusedDialogBox
-	case focusFindings:
-		findingsViewport = focusedViewport
-		findingsViewportHeader = focusedViewportHeaderColor
+		comparedResultDialogBox = focusedDialogBox
 	case focusSummary:
 		summaryViewport = focusedViewport
 		summaryViewportHeader = focusedViewportHeaderColor
@@ -269,69 +285,52 @@ func (m Model) mainView() string {
 	selectedResultContent := selectedResultDialogBox.Width(dialogFixedWidth).Render(selectedResultText)
 	selectedResult := lipgloss.JoinHorizontal(lipgloss.Top, selectedResultLabel, selectedResultContent)
 
-	compareResultLabel := common.LabelStyle.Render("Compare Result")
-	compareResultText := common.TruncateText(getResultText(m.compareResult), dialogFixedWidth)
-	compareResultContent := compareResultDialogBox.Width(dialogFixedWidth).Render(compareResultText)
-	compareResult := lipgloss.JoinHorizontal(lipgloss.Top, compareResultLabel, compareResultContent)
+	comparedResultLabel := common.LabelStyle.Render("Compare Result")
+	comparedResultText := common.TruncateText(getResultText(m.comparedResult), dialogFixedWidth)
+	comparedResultContent := comparedResultDialogBox.Width(dialogFixedWidth).Render(comparedResultText)
+	comparedResult := lipgloss.JoinHorizontal(lipgloss.Top, comparedResultLabel, comparedResultContent)
 
-	resultSelectionContent := lipgloss.JoinHorizontal(lipgloss.Top, selectedResult, compareResult)
+	resultSelectionContent := lipgloss.JoinHorizontal(lipgloss.Top, selectedResult, comparedResult)
 
-	// Add Controls panel + Results Tables
-	m.findings.SetShowTitle(false)
+	// Add Tables
+	m.findingsSummary.Style = summaryViewport
+	m.findingsSummary.SetContent(m.findingsTable.View())
+	summaryPanel := fmt.Sprintf("%s\n%s", common.HeaderView("Summary", m.findingsSummary.Width-common.PanelStyle.GetPaddingRight(), summaryViewportHeader), m.findingsSummary.View())
 
-	m.findingPicker.Style = findingsViewport
-	m.findingPicker.SetContent(m.findings.View())
-	bottomLeftView := fmt.Sprintf("%s\n%s", common.HeaderView("Findings List", m.findingPicker.Width-common.PanelStyle.GetMarginRight(), findingsViewportHeader), m.findingPicker.View())
+	m.observationsSummary.Style = observationsViewport
+	m.observationsSummary.SetContent(m.observationsTable.View())
+	observationsPanel := fmt.Sprintf("%s\n%s", common.HeaderView("Observations", m.observationsSummary.Width-common.PanelStyle.GetPaddingRight(), observationsViewportHeader), m.observationsSummary.View())
 
-	m.findingSummary.Style = summaryViewport
-	m.findingSummary.SetContent(m.renderSummary())
-	summaryPanel := fmt.Sprintf("%s\n%s", common.HeaderView("Summary", m.findingSummary.Width-common.PanelStyle.GetPaddingRight(), summaryViewportHeader), m.findingSummary.View())
-
-	m.observationSummary.Style = observationsViewport
-	m.observationSummary.SetContent(m.renderObservations())
-	observationsPanel := fmt.Sprintf("%s\n%s", common.HeaderView("Observations", m.observationSummary.Width-common.PanelStyle.GetPaddingRight(), observationsViewportHeader), m.observationSummary.View())
-
-	bottomRightView := lipgloss.JoinVertical(lipgloss.Top, summaryPanel, observationsPanel)
-	bottomContent := lipgloss.JoinHorizontal(lipgloss.Top, bottomLeftView, bottomRightView)
+	bottomContent := lipgloss.JoinVertical(lipgloss.Top, summaryPanel, observationsPanel)
 
 	return lipgloss.JoinVertical(lipgloss.Top, helpView, resultSelectionContent, bottomContent)
 }
 
-func (m Model) updateViewportContent(resultType string) string {
-	// TODO: refactor this to use the PiickerModel
-	help := common.NewHelpModel(true)
-	help.ShortHelp = common.ShortHelpPicker
-	s := strings.Builder{}
-	s.WriteString(fmt.Sprintf("Select a result to %s:\n\n", resultType))
+// func (m *Model) renderSummary() string {
+// 	return m.findingsTable.View()
+// 	// return "⚠️ Summary Under Construction ⚠️"
+// }
 
-	for i, result := range m.results {
-		if m.selectedResultIndex == i {
-			s.WriteString("(•) ")
-		} else {
-			s.WriteString("( ) ")
+// func (m *Model) renderObservations() string {
+// 	return m.observationsTable.View()
+// 	// return "⚠️ Observations Under Construction ⚠️"
+// }
+
+func getComparedResults(results []result, selectedResult result) []string {
+	comparedResults := []string{"No Compared Result"}
+	for _, r := range results {
+		if r.uuid != selectedResult.uuid {
+			comparedResults = append(comparedResults, getResultText(r))
 		}
-		s.WriteString(getResultText(result))
-		s.WriteString("\n")
 	}
-
-	return lipgloss.JoinVertical(lipgloss.Top, s.String(), help.View())
-}
-
-func (m *Model) renderSummary() string {
-	return m.findingsTable.View()
-	// return "⚠️ Summary Under Construction ⚠️"
-}
-
-func (m *Model) renderObservations() string {
-	return m.observationsTable.View()
-	// return "⚠️ Observations Under Construction ⚠️"
+	return comparedResults
 }
 
 func getResultText(result result) string {
 	if result.uuid == "" {
 		return "No Result Selected"
 	}
-	return fmt.Sprintf("%s - %s", result.title, result.uuid)
+	return fmt.Sprintf("%s - %s", result.title, result.timestamp)
 }
 
 func makeObservationMap(observations *[]oscalTypes_1_1_2.Observation) map[string]observation {

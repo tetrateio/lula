@@ -179,7 +179,6 @@ var (
 	}
 )
 
-// Implemented for
 type editorKeys struct {
 	Confirm    key.Binding
 	NewLine    key.Binding
@@ -215,5 +214,38 @@ var (
 	}
 	FullHelpEditing = [][]key.Binding{
 		{EditKeys.Confirm}, {EditKeys.NewLine}, {EditKeys.DeleteWord}, {EditKeys.Cancel},
+	}
+)
+
+type tableKeys struct {
+	Up     key.Binding
+	Down   key.Binding
+	Select key.Binding
+}
+
+var TableKeys = tableKeys{
+	Up: key.NewBinding(
+		key.WithKeys("up", "k"),
+		key.WithHelp("↑/k", "move up"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down", "j"),
+		key.WithHelp("↓/j", "move down"),
+	),
+	Select: key.NewBinding(
+		key.WithKeys("enter"),
+		key.WithHelp("↳", "select"),
+	),
+}
+
+var (
+	ShortHelpTable = []key.Binding{
+		TableKeys.Up, TableKeys.Down, TableKeys.Select,
+	}
+	FullHelpTableOneLine = []key.Binding{
+		TableKeys.Up, TableKeys.Down, TableKeys.Select,
+	}
+	FullHelpTable = [][]key.Binding{
+		{TableKeys.Up}, {TableKeys.Down}, {TableKeys.Select},
 	}
 )

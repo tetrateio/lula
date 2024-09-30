@@ -3,6 +3,7 @@ package common
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -115,6 +116,18 @@ var (
 			Padding(1, 2).
 			Margin(1).
 			Width(30)
+
+	// Table Styles
+	TableStyles = table.Styles{
+		Header:   lipgloss.NewStyle().Foreground(Highlight).Bold(true),
+		Cell:     lipgloss.NewStyle().Foreground(Subtle),
+		Selected: lipgloss.NewStyle().Foreground(Highlight),
+	}
+	UnfocusedTableStyles = table.Styles{
+		Header:   lipgloss.NewStyle().Foreground(Highlight).Bold(true),
+		Cell:     lipgloss.NewStyle().Foreground(Subtle),
+		Selected: lipgloss.NewStyle().Foreground(Subtle),
+	}
 
 	// Help
 	KeyStyle        = lipgloss.NewStyle().Foreground(HelpKey)

@@ -20,17 +20,9 @@ type keys struct {
 	Quit          key.Binding
 }
 
-var assessmentHotkeys = keys{
-	Quit: common.CommonKeys.Quit,
-	Help: common.CommonKeys.Help,
-	Validate: key.NewBinding(
-		key.WithKeys("v"),
-		key.WithHelp("v", "validate"),
-	),
-	Evaluate: key.NewBinding(
-		key.WithKeys("e"),
-		key.WithHelp("e", "evaluate"),
-	),
+var assessmentKeys = keys{
+	Quit:          common.CommonKeys.Quit,
+	Help:          common.CommonKeys.Help,
 	Confirm:       common.CommonKeys.Confirm,
 	Cancel:        common.CommonKeys.Cancel,
 	Navigation:    common.CommonKeys.Navigation,
@@ -41,23 +33,15 @@ var assessmentHotkeys = keys{
 	Down:          common.PickerKeys.Down,
 }
 
-func (k keys) ShortHelp() []key.Binding {
-	return []key.Binding{k.Validate, k.Evaluate, k.Help}
-}
-
-func (k keys) FullHelp() [][]key.Binding {
-	return [][]key.Binding{
-		{k.Evaluate}, {k.Confirm}, {k.Navigation}, {k.SwitchModels}, {k.Help}, {k.Quit},
+var (
+	// No focus
+	shortHelpNoFocus = []key.Binding{
+		assessmentKeys.Navigation, assessmentKeys.SwitchModels, assessmentKeys.Help,
 	}
-}
-
-func (m *Model) updateKeyBindings() {
-	m.findings.KeyMap = common.UnfocusedListKeyMap()
-	m.findings.SetDelegate(common.NewUnfocusedDelegate())
-
-	switch m.focus {
-	case focusFindings:
-		m.findings.KeyMap = common.FocusedListKeyMap()
-		m.findings.SetDelegate(common.NewFocusedDelegate())
+	fullHelpNoFocusOneLine = []key.Binding{
+		assessmentKeys.Navigation, assessmentKeys.SwitchModels, assessmentKeys.Help,
 	}
-}
+	fullHelpNoFocus = [][]key.Binding{
+		{assessmentKeys.Navigation}, {assessmentKeys.SwitchModels}, {assessmentKeys.Help},
+	}
+)
