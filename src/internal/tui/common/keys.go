@@ -22,6 +22,7 @@ type Keys struct {
 	Edit           key.Binding
 	Save           key.Binding
 	Newline        key.Binding
+	Detail         key.Binding
 }
 
 var CommonKeys = Keys{
@@ -76,6 +77,10 @@ var CommonKeys = Keys{
 	Save: key.NewBinding(
 		key.WithKeys("ctrl+s"),
 		key.WithHelp("ctrl+s", "save"),
+	),
+	Detail: key.NewBinding(
+		key.WithKeys("d"),
+		key.WithHelp("d", "detail"),
 	),
 }
 
@@ -221,6 +226,8 @@ type tableKeys struct {
 	Up     key.Binding
 	Down   key.Binding
 	Select key.Binding
+	Filter key.Binding
+	Detail key.Binding
 }
 
 var TableKeys = tableKeys{
@@ -236,16 +243,57 @@ var TableKeys = tableKeys{
 		key.WithKeys("enter"),
 		key.WithHelp("↳", "select"),
 	),
+	Filter: key.NewBinding(
+		key.WithKeys("/"),
+		key.WithHelp("/", "filter"),
+	),
+	Detail: key.NewBinding(
+		key.WithKeys("d"),
+		key.WithHelp("d", "detail"),
+	),
 }
 
 var (
 	ShortHelpTable = []key.Binding{
-		TableKeys.Up, TableKeys.Down, TableKeys.Select,
+		TableKeys.Up, TableKeys.Down, TableKeys.Filter, TableKeys.Detail,
 	}
 	FullHelpTableOneLine = []key.Binding{
-		TableKeys.Up, TableKeys.Down, TableKeys.Select,
+		TableKeys.Up, TableKeys.Down, TableKeys.Select, TableKeys.Detail,
 	}
 	FullHelpTable = [][]key.Binding{
-		{TableKeys.Up}, {TableKeys.Down}, {TableKeys.Select},
+		{TableKeys.Up}, {TableKeys.Down}, {TableKeys.Select}, {TableKeys.Detail},
+	}
+)
+
+type detailKeys struct {
+	Up     key.Binding
+	Down   key.Binding
+	Cancel key.Binding
+}
+
+var DetailKeys = detailKeys{
+	Up: key.NewBinding(
+		key.WithKeys("up", "k"),
+		key.WithHelp("↑/k", "scroll up"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down", "j"),
+		key.WithHelp("↓/j", "scroll down"),
+	),
+	Cancel: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "cancel"),
+	),
+}
+
+var (
+	ShortHelpDetail = []key.Binding{
+		DetailKeys.Up, DetailKeys.Down, DetailKeys.Cancel,
+	}
+	FullHelpDetailOneLine = []key.Binding{
+		DetailKeys.Up, DetailKeys.Down, DetailKeys.Cancel,
+	}
+	FullHelpDetail = [][]key.Binding{
+		{DetailKeys.Up}, {DetailKeys.Down}, {DetailKeys.Cancel},
 	}
 )

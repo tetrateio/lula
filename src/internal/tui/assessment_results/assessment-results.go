@@ -15,6 +15,8 @@ import (
 	"github.com/evertras/bubble-table/table"
 )
 
+type Satisfaction string
+
 const (
 	height           = 20
 	width            = 12
@@ -24,11 +26,31 @@ const (
 )
 
 const (
-	resultPicker         common.PickerKind = "result"
-	comparedResultPicker common.PickerKind = "compared result"
-	columnKeyName                          = "name"
-	columnKeyStatus                        = "status"
-	columnKeyDescription                   = "description"
+	resultPicker                 common.PickerKind = "result"
+	comparedResultPicker         common.PickerKind = "compared result"
+	columnKeyName                                  = "name"
+	columnKeyStatus                                = "status"
+	columnKeyDescription                           = "description"
+	columnKeyStatusChange                          = "status_change"
+	columnKeyFinding                               = "finding"
+	columnKeyComparedFinding                       = "compared_finding"
+	columnKeyObservation                           = "observation"
+	columnKeyComparedObservation                   = "compared_observation"
+
+	satisfied    Satisfaction = "satisfied"
+	notSatisfied Satisfaction = "not-satisfied"
+)
+
+var (
+	styleBase = lipgloss.NewStyle().
+			Foreground(common.Text).
+			BorderForeground(common.Highlight).
+			Align(lipgloss.Left)
+
+	satisfiedColors = map[Satisfaction]string{
+		satisfied:    "#3ad33c",
+		notSatisfied: "e36750",
+	}
 )
 
 func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentResults) Model {
@@ -41,10 +63,17 @@ func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentRes
 			var findingsRows []table.Row
 			var observationsRows []table.Row
 			for _, f := range *r.Findings {
+				findingString, err := common.ToYamlString(f)
+				if err != nil {
+					common.PrintToLog("error converting finding to yaml: %v", err)
+					findingString = ""
+				}
 				findingsRows = append(findingsRows, table.NewRow(table.RowData{
 					columnKeyName:        f.Target.TargetId,
 					columnKeyStatus:      f.Target.Status.State,
-					columnKeyDescription: strings.ReplaceAll(f.Description, "\n", " ")}))
+					columnKeyDescription: strings.ReplaceAll(f.Description, "\n", " "),
+					columnKeyFinding:     findingString,
+				}))
 			}
 			for _, o := range *r.Observations {
 				state := "undefined"
@@ -127,17 +156,22 @@ func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentRes
 
 	findingsTableColumns := []table.Column{
 		table.NewFlexColumn(columnKeyName, "Control", 1).WithFiltered(true),
-		table.NewFlexColumn(columnKeyStatus, "Status", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyStatus, "Status", 1),
 		table.NewFlexColumn(columnKeyDescription, "Description", 4),
 	}
 
 	observationsTableColumns := []table.Column{
 		table.NewFlexColumn(columnKeyName, "Observation", 2).WithFiltered(true),
-		table.NewFlexColumn(columnKeyStatus, "Status", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyStatus, "Status", 1),
 		table.NewFlexColumn(columnKeyDescription, "Remarks", 3),
 	}
 
-	findingsTable := table.New(findingsTableColumns).WithRows(selectedResult.findingsRows).Filtered(true)
+	findingsTable := table.New(findingsTableColumns).
+		WithRows(selectedResult.findingsRows).
+		WithBaseStyle(styleBase).
+		Filtered(true).
+		SortByAsc(columnKeyName)
+
 	observationsTable := table.New(observationsTableColumns).WithRows(selectedResult.observationsRows).Filtered(true)
 
 	return Model{
@@ -151,6 +185,7 @@ func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentRes
 		findingsSummary:       findingsSummary,
 		observationsTable:     observationsTable,
 		observationsSummary:   observationsSummary,
+		detailView:            common.NewDetailModel(),
 	}
 }
 
@@ -175,7 +210,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.help.ShowAll = !m.help.ShowAll
 
 			case common.ContainsKey(k, m.keys.NavigateLeft.Keys()):
-				if !m.resultsPicker.Open && !m.comparedResultsPicker.Open {
+				if !m.resultsPicker.Open && !m.comparedResultsPicker.Open && !m.detailView.Open {
 					if m.focus == 0 {
 						m.focus = maxFocus
 					} else {
@@ -185,7 +220,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 			case common.ContainsKey(k, m.keys.NavigateRight.Keys()):
-				if !m.resultsPicker.Open && !m.comparedResultsPicker.Open {
+				if !m.resultsPicker.Open && !m.comparedResultsPicker.Open && !m.detailView.Open {
 					m.focus = (m.focus + 1) % (maxFocus + 1)
 					m.updateKeyBindings()
 				}
@@ -216,6 +251,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					// If 'd', pull up detailed view
 
 				}
+
+			case common.ContainsKey(k, m.keys.Detail.Keys()):
+				common.PrintToLog("detail key pressed")
+				switch m.focus {
+				case focusSummary:
+					selected := m.findingsTable.HighlightedRow().Data[columnKeyFinding].(string)
+					common.PrintToLog("selected: \n%s", selected)
+					return m, func() tea.Msg {
+						return common.DetailOpenMsg{
+							Content: selected,
+							Height:  (m.height + common.TabOffset),
+							Width:   m.width,
+						}
+					}
+				}
 			}
 		}
 	}
@@ -226,6 +276,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	mdl, cmd = m.comparedResultsPicker.Update(msg)
 	m.comparedResultsPicker = mdl.(common.PickerModel)
+	cmds = append(cmds, cmd)
+
+	mdl, cmd = m.detailView.Update(msg)
+	m.detailView = mdl.(common.DetailModel)
 	cmds = append(cmds, cmd)
 
 	m.findingsTable, cmd = m.findingsTable.Update(msg)
@@ -243,6 +297,9 @@ func (m Model) View() string {
 	}
 	if m.comparedResultsPicker.Open {
 		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, m.comparedResultsPicker.View(), lipgloss.WithWhitespaceChars(" "))
+	}
+	if m.detailView.Open {
+		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, m.detailView.View(), lipgloss.WithWhitespaceChars(" "))
 	}
 	return m.mainView()
 }

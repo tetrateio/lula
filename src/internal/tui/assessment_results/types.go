@@ -21,6 +21,7 @@ type Model struct {
 	findingsTable         table.Model
 	observationsSummary   viewport.Model
 	observationsTable     table.Model
+	detailView            common.DetailModel
 	width                 int
 	height                int
 }
@@ -88,10 +89,6 @@ func (m *Model) UpdateSizing(height, width int) {
 	m.observationsSummary.Width = panelWidth
 	observationsRowHeight := bottomPanelHeight - common.PanelTitleStyle.GetHeight() - common.PanelStyle.GetVerticalPadding() - 6
 	m.observationsTable = m.observationsTable.WithTargetWidth(panelInternalWidth).WithPageSize(observationsRowHeight)
-
-	// m.observationsTable.WithPageSize(observationsRowHeight)
-
-	// m.observationsTable.WithColumns(observationsTableColumns)
 }
 
 func (m *Model) GetDimensions() (height, width int) {
