@@ -45,6 +45,7 @@ type result struct {
 	observations     *[]oscalTypes_1_1_2.Observation
 	findingsRows     []table.Row
 	observationsRows []table.Row
+	observationsMap  map[string]observation
 }
 
 type finding struct {

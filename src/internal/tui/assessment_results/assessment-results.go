@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	blist "github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -33,20 +32,17 @@ const (
 	columnKeyDescription                           = "description"
 	columnKeyStatusChange                          = "status_change"
 	columnKeyFinding                               = "finding"
+	columnKeyRelatedObs                            = "related_obs"
 	columnKeyComparedFinding                       = "compared_finding"
 	columnKeyObservation                           = "observation"
 	columnKeyComparedObservation                   = "compared_observation"
+	columnKeyValidationId                          = "validation_id"
 
 	satisfied    Satisfaction = "satisfied"
 	notSatisfied Satisfaction = "not-satisfied"
 )
 
 var (
-	styleBase = lipgloss.NewStyle().
-			Foreground(common.Text).
-			BorderForeground(common.Highlight).
-			Align(lipgloss.Left)
-
 	satisfiedColors = map[Satisfaction]string{
 		satisfied:    "#3ad33c",
 		notSatisfied: "e36750",
@@ -54,139 +50,31 @@ var (
 )
 
 func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentResults) Model {
-	results := make([]result, 0)
-	findings := make([]blist.Item, 0)
-	var selectedResult result
+	help := common.NewHelpModel(false)
+	help.OneLine = true
+	help.ShortHelp = shortHelpNoFocus
 
-	if assessmentResults != nil {
-		for _, r := range assessmentResults.Results {
-			var findingsRows []table.Row
-			var observationsRows []table.Row
-			for _, f := range *r.Findings {
-				findingString, err := common.ToYamlString(f)
-				if err != nil {
-					common.PrintToLog("error converting finding to yaml: %v", err)
-					findingString = ""
-				}
-				findingsRows = append(findingsRows, table.NewRow(table.RowData{
-					columnKeyName:        f.Target.TargetId,
-					columnKeyStatus:      f.Target.Status.State,
-					columnKeyDescription: strings.ReplaceAll(f.Description, "\n", " "),
-					columnKeyFinding:     findingString,
-				}))
-			}
-			for _, o := range *r.Observations {
-				state := "undefined"
-				var remarks strings.Builder
-				if o.RelevantEvidence != nil {
-					for _, e := range *o.RelevantEvidence {
-						if e.Description == "Result: satisfied\n" {
-							state = "satisfied"
-						} else if e.Description == "Result: not-satisfied\n" {
-							state = "not-satisfied"
-						}
-						if e.Remarks != "" {
-							remarks.WriteString(strings.ReplaceAll(e.Remarks, "\n", " "))
-						}
-					}
-				}
-				observationsRows = append(observationsRows, table.NewRow(table.RowData{
-					columnKeyName:        o.Description,
-					columnKeyStatus:      state,
-					columnKeyDescription: remarks.String()}))
-			}
-
-			results = append(results, result{
-				uuid:             r.UUID,
-				title:            r.Title,
-				timestamp:        r.Start.Format(time.RFC3339),
-				findings:         r.Findings,
-				observations:     r.Observations,
-				findingsRows:     findingsRows,
-				observationsRows: observationsRows,
-			})
-		}
-	}
-
-	// TODO - fix this so that findings table is associated to the selected result; also results table
-	// possibly need to add another table type for the "comparison" table
-	if len(results) != 0 {
-		selectedResult = results[0]
-		observationMap := makeObservationMap(selectedResult.observations)
-		if selectedResult.findings != nil {
-			for _, f := range *selectedResult.findings {
-				// get the related observations
-				observations := make([]observation, 0)
-				if f.RelatedObservations != nil {
-					for _, o := range *f.RelatedObservations {
-						observationUuid := o.ObservationUuid
-						if _, ok := observationMap[observationUuid]; ok {
-							observations = append(observations, observationMap[observationUuid])
-						}
-					}
-				}
-				findings = append(findings, finding{
-					title:        f.Title,
-					uuid:         f.UUID,
-					controlId:    f.Target.TargetId,
-					state:        f.Target.Status.State,
-					observations: observations,
-				})
-			}
-		}
-	}
-
-	resultItems := make([]string, len(results))
-	for i, c := range results {
-		resultItems[i] = getResultText(c)
-	}
-	resultsPicker := common.NewPickerModel("Select a Result", resultPicker, resultItems, 0)
-
-	comparedResultItems := getComparedResults(results, selectedResult)
-	comparedResultsPicker := common.NewPickerModel("Select a Result to Compare", comparedResultPicker, comparedResultItems, 0)
+	resultsPicker := common.NewPickerModel("Select a Result", resultPicker, []string{}, 0)
+	comparedResultsPicker := common.NewPickerModel("Select a Result to Compare", comparedResultPicker, []string{}, 0)
 
 	findingsSummary := viewport.New(width, height)
 	findingsSummary.Style = common.PanelStyle
 	observationsSummary := viewport.New(width, height)
 	observationsSummary.Style = common.PanelStyle
 
-	help := common.NewHelpModel(false)
-	help.OneLine = true
-	help.ShortHelp = shortHelpNoFocus
-
-	findingsTableColumns := []table.Column{
-		table.NewFlexColumn(columnKeyName, "Control", 1).WithFiltered(true),
-		table.NewFlexColumn(columnKeyStatus, "Status", 1),
-		table.NewFlexColumn(columnKeyDescription, "Description", 4),
-	}
-
-	observationsTableColumns := []table.Column{
-		table.NewFlexColumn(columnKeyName, "Observation", 2).WithFiltered(true),
-		table.NewFlexColumn(columnKeyStatus, "Status", 1),
-		table.NewFlexColumn(columnKeyDescription, "Remarks", 3),
-	}
-
-	findingsTable := table.New(findingsTableColumns).
-		WithRows(selectedResult.findingsRows).
-		WithBaseStyle(styleBase).
-		Filtered(true).
-		SortByAsc(columnKeyName)
-
-	observationsTable := table.New(observationsTableColumns).WithRows(selectedResult.observationsRows).Filtered(true)
-
-	return Model{
+	model := Model{
 		keys:                  assessmentKeys,
 		help:                  help,
-		results:               results,
 		resultsPicker:         resultsPicker,
 		comparedResultsPicker: comparedResultsPicker,
-		selectedResult:        selectedResult,
-		findingsTable:         findingsTable,
 		findingsSummary:       findingsSummary,
-		observationsTable:     observationsTable,
 		observationsSummary:   observationsSummary,
 		detailView:            common.NewDetailModel(),
 	}
+
+	model.UpdateResults(assessmentResults)
+
+	return model
 }
 
 func (m Model) Init() tea.Cmd {
@@ -252,11 +140,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				}
 
+			// TODOs: remove listening on other keys when filter is being used in the tables
+			// Add "enter" logic to narrow down the observations linked to the selected finding
+
 			case common.ContainsKey(k, m.keys.Detail.Keys()):
 				common.PrintToLog("detail key pressed")
 				switch m.focus {
 				case focusSummary:
 					selected := m.findingsTable.HighlightedRow().Data[columnKeyFinding].(string)
+					common.PrintToLog("selected: \n%s", selected)
+					return m, func() tea.Msg {
+						return common.DetailOpenMsg{
+							Content: selected,
+							Height:  (m.height + common.TabOffset),
+							Width:   m.width,
+						}
+					}
+
+				case focusObservations:
+					selected := m.observationsTable.HighlightedRow().Data[columnKeyObservation].(string)
 					common.PrintToLog("selected: \n%s", selected)
 					return m, func() tea.Msg {
 						return common.DetailOpenMsg{
@@ -318,8 +220,10 @@ func (m Model) mainView() string {
 	comparedResultDialogBox := common.DialogBoxStyle
 	summaryViewport := common.PanelStyle
 	summaryViewportHeader := common.Highlight
+	summaryTableStyle := common.TableStyleBase
 	observationsViewport := common.PanelStyle
 	observationsViewportHeader := common.Highlight
+	observationsTableStyle := common.TableStyleBase
 
 	switch m.focus {
 	case focusResultSelection:
@@ -329,9 +233,11 @@ func (m Model) mainView() string {
 	case focusSummary:
 		summaryViewport = focusedViewport
 		summaryViewportHeader = focusedViewportHeaderColor
+		summaryTableStyle = common.TableStyleActive
 	case focusObservations:
 		observationsViewport = focusedViewport
 		observationsViewportHeader = focusedViewportHeaderColor
+		observationsTableStyle = common.TableStyleActive
 	}
 
 	// add panels at the top for selecting a result, selecting a comparison result
@@ -351,10 +257,12 @@ func (m Model) mainView() string {
 
 	// Add Tables
 	m.findingsSummary.Style = summaryViewport
+	m.findingsTable = m.findingsTable.WithBaseStyle(summaryTableStyle)
 	m.findingsSummary.SetContent(m.findingsTable.View())
 	summaryPanel := fmt.Sprintf("%s\n%s", common.HeaderView("Summary", m.findingsSummary.Width-common.PanelStyle.GetPaddingRight(), summaryViewportHeader), m.findingsSummary.View())
 
 	m.observationsSummary.Style = observationsViewport
+	m.observationsTable = m.observationsTable.WithBaseStyle(observationsTableStyle)
 	m.observationsSummary.SetContent(m.observationsTable.View())
 	observationsPanel := fmt.Sprintf("%s\n%s", common.HeaderView("Observations", m.observationsSummary.Width-common.PanelStyle.GetPaddingRight(), observationsViewportHeader), m.observationsSummary.View())
 
@@ -363,14 +271,148 @@ func (m Model) mainView() string {
 	return lipgloss.JoinVertical(lipgloss.Top, helpView, resultSelectionContent, bottomContent)
 }
 
-// func (m *Model) renderSummary() string {
-// 	return m.findingsTable.View()
-// 	// return "⚠️ Summary Under Construction ⚠️"
-// }
+func (m *Model) UpdateResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) {
+	var selectedResult result
+	results := make([]result, 0)
+	findingsRows := make([]table.Row, 0)
+	observationsRows := make([]table.Row, 0)
 
-// func (m *Model) renderObservations() string {
-// 	return m.observationsTable.View()
-// 	// return "⚠️ Observations Under Construction ⚠️"
+	if assessmentResults != nil {
+		for _, r := range assessmentResults.Results {
+			for _, f := range *r.Findings {
+				findingString, err := common.ToYamlString(f)
+				if err != nil {
+					common.PrintToLog("error converting finding to yaml: %v", err)
+					findingString = ""
+				}
+				relatedObs := make([]string, 0)
+				if f.RelatedObservations != nil {
+					for _, o := range *f.RelatedObservations {
+						relatedObs = append(relatedObs, o.ObservationUuid)
+					}
+				}
+				findingsRows = append(findingsRows, table.NewRow(table.RowData{
+					columnKeyName:        f.Target.TargetId,
+					columnKeyStatus:      f.Target.Status.State,
+					columnKeyDescription: strings.ReplaceAll(f.Description, "\n", " "),
+					// Hidden columns
+					columnKeyFinding:    findingString,
+					columnKeyRelatedObs: relatedObs,
+				}))
+			}
+			for _, o := range *r.Observations {
+				state := "undefined"
+				var remarks strings.Builder
+				if o.RelevantEvidence != nil {
+					for _, e := range *o.RelevantEvidence {
+						if e.Description == "Result: satisfied\n" {
+							state = "satisfied"
+						} else if e.Description == "Result: not-satisfied\n" {
+							state = "not-satisfied"
+						}
+						if e.Remarks != "" {
+							remarks.WriteString(strings.ReplaceAll(e.Remarks, "\n", " "))
+						}
+					}
+				}
+				obsString, err := common.ToYamlString(o)
+				if err != nil {
+					common.PrintToLog("error converting observation to yaml: %v", err)
+					obsString = ""
+				}
+				observationsRows = append(observationsRows, table.NewRow(table.RowData{
+					columnKeyName:        GetReadableObservationName(o.Description),
+					columnKeyStatus:      state,
+					columnKeyDescription: remarks.String(),
+					// Hidden columns
+					columnKeyObservation:  obsString,
+					columnKeyValidationId: findUuid(o.Description),
+				}))
+			}
+			observationsMap := makeObservationMap(r.Observations)
+
+			results = append(results, result{
+				uuid:             r.UUID,
+				title:            r.Title,
+				timestamp:        r.Start.Format(time.RFC3339),
+				findings:         r.Findings,
+				observations:     r.Observations,
+				findingsRows:     findingsRows,
+				observationsRows: observationsRows,
+				observationsMap:  observationsMap,
+			})
+		}
+	}
+
+	if len(results) != 0 {
+		selectedResult = results[0]
+		// observationMap := makeObservationMap(selectedResult.observations)
+		// if selectedResult.findings != nil {
+		// 	for _, f := range *selectedResult.findings {
+		// 		// get the related observations
+		// 		observations := make([]observation, 0)
+		// 		if f.RelatedObservations != nil {
+		// 			for _, o := range *f.RelatedObservations {
+		// 				observationUuid := o.ObservationUuid
+		// 				if _, ok := observationMap[observationUuid]; ok {
+		// 					observations = append(observations, observationMap[observationUuid])
+		// 				}
+		// 			}
+		// 		}
+		// 		findings = append(findings, finding{
+		// 			title:        f.Title,
+		// 			uuid:         f.UUID,
+		// 			controlId:    f.Target.TargetId,
+		// 			state:        f.Target.Status.State,
+		// 			observations: observations,
+		// 		})
+		// 	}
+		// }
+	}
+
+	// Set up tables
+	findingsTableColumns := []table.Column{
+		table.NewFlexColumn(columnKeyName, "Control", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyStatus, "Status", 1),
+		table.NewFlexColumn(columnKeyDescription, "Description", 4),
+	}
+
+	observationsTableColumns := []table.Column{
+		table.NewFlexColumn(columnKeyName, "Observation", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyStatus, "Status", 1),
+		table.NewFlexColumn(columnKeyDescription, "Remarks", 4),
+	}
+
+	findingsTable := table.New(findingsTableColumns).
+		WithRows(selectedResult.findingsRows).
+		WithBaseStyle(common.TableStyleBase).
+		Filtered(true).
+		SortByAsc(columnKeyName)
+
+	observationsTable := table.New(observationsTableColumns).
+		WithRows(selectedResult.observationsRows).
+		WithBaseStyle(common.TableStyleBase).
+		Filtered(true).
+		SortByAsc(columnKeyName)
+
+	// Update model parameters
+	resultItems := make([]string, len(results))
+	for i, c := range results {
+		resultItems[i] = getResultText(c)
+	}
+
+	m.results = results
+	m.selectedResult = selectedResult
+	m.resultsPicker.UpdateItems(resultItems)
+	comparedResultItems := getComparedResults(results, selectedResult)
+	m.comparedResultsPicker.UpdateItems(comparedResultItems)
+
+	m.observationsTable = observationsTable
+	m.findingsTable = findingsTable
+}
+
+// func (m *Model) UpdateComparedResults(result, comparedResult *oscalTypes_1_1_2.Result) {
+// 	resultComparisonMap := pkgResult.NewResultComparisonMap(*result, *comparedResult)
 // }
 
 func getComparedResults(results []result, selectedResult result) []string {
@@ -424,4 +466,23 @@ func findUuid(input string) string {
 	re := regexp.MustCompile(uuidPattern)
 
 	return re.FindString(input)
+}
+
+func GetReadableObservationName(desc string) string {
+	// Define the regular expression pattern
+	pattern := `\[TEST\]: ([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}) - (.+)`
+
+	// Compile the regular expression
+	re := regexp.MustCompile(pattern)
+
+	// Find the matches
+	matches := re.FindStringSubmatch(desc)
+
+	if len(matches) == 3 {
+		message := matches[2]
+
+		return message
+	} else {
+		return desc
+	}
 }
