@@ -38,14 +38,15 @@ const (
 	columnKeyComparedObservation                   = "compared_observation"
 	columnKeyValidationId                          = "validation_id"
 
-	satisfied    Satisfaction = "satisfied"
-	notSatisfied Satisfaction = "not-satisfied"
+	// satisfied    Satisfaction = "satisfied"
+	// notSatisfied Satisfaction = "not-satisfied"
 )
 
 var (
-	satisfiedColors = map[Satisfaction]string{
-		satisfied:    "#3ad33c",
-		notSatisfied: "e36750",
+	satisfiedColors = map[string]lipgloss.Style{
+		"satisfied":     lipgloss.NewStyle().Foreground(lipgloss.Color("#3ad33c")),
+		"not-satisfied": lipgloss.NewStyle().Foreground(lipgloss.Color("#e36750")),
+		"other":         lipgloss.NewStyle().Foreground(lipgloss.Color("#f3f3f3")),
 	}
 )
 
@@ -114,9 +115,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 			case common.ContainsKey(k, m.keys.Confirm.Keys()):
+				m.keys = assessmentKeys
 				switch m.focus {
 				case focusResultSelection:
-					if len(m.results) > 1 && !m.resultsPicker.Open {
+					if !m.resultsPicker.Open {
 						return m, func() tea.Msg {
 							return common.PickerOpenMsg{
 								Kind: resultPicker,
@@ -125,7 +127,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 
 				case focusCompareSelection:
-					if len(m.results) > 1 && m.comparedResultsPicker.Open {
+					if len(m.results) > 1 && !m.comparedResultsPicker.Open {
+						// TODO: get compared result items to send with picker open
 						return m, func() tea.Msg {
 							return common.PickerOpenMsg{
 								Kind: comparedResultPicker,
@@ -133,20 +136,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						}
 					}
 
-				case focusSummary:
-					// do stuff
-					// Update the selected findings, update the observations table
-					// If 'd', pull up detailed view
-
+				case focusFindings:
+					// Select the observations
+					if !m.detailView.Open {
+						m.observationsTable = m.observationsTable.WithRows(m.getObservationsByFinding(m.findingsTable.HighlightedRow().Data[columnKeyRelatedObs].([]string)))
+					}
 				}
 
-			// TODOs: remove listening on other keys when filter is being used in the tables
-			// Add "enter" logic to narrow down the observations linked to the selected finding
+			case common.ContainsKey(k, m.keys.Cancel.Keys()):
+				m.keys = assessmentKeys
+				switch m.focus {
+				case focusFindings:
+					m.observationsTable = m.observationsTable.WithRows(m.selectedResult.observationsRows)
+				}
 
 			case common.ContainsKey(k, m.keys.Detail.Keys()):
 				common.PrintToLog("detail key pressed")
 				switch m.focus {
-				case focusSummary:
+				case focusFindings:
 					selected := m.findingsTable.HighlightedRow().Data[columnKeyFinding].(string)
 					common.PrintToLog("selected: \n%s", selected)
 					return m, func() tea.Msg {
@@ -168,7 +175,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						}
 					}
 				}
+
+			case common.ContainsKey(k, m.keys.Filter.Keys()):
+				// Lock keys during table filter
+				if m.focus == focusFindings && !m.detailView.Open {
+					m.keys = assessmentKeysInFilter
+				}
+				if m.focus == focusObservations && !m.detailView.Open {
+					m.keys = assessmentKeysInFilter
+				}
 			}
+		}
+
+	case common.PickerItemSelected:
+		if m.open {
+			if msg.From == resultPicker {
+				m.selectedResult = m.results[msg.Selected]
+				m.observationsTable = m.observationsTable.WithRows(m.selectedResult.observationsRows)
+				m.findingsTable = m.findingsTable.WithRows(m.selectedResult.findingsRows)
+			}
+			// TODO: add logic for compared result picker
 		}
 	}
 
@@ -218,9 +244,9 @@ func (m Model) mainView() string {
 
 	selectedResultDialogBox := common.DialogBoxStyle
 	comparedResultDialogBox := common.DialogBoxStyle
-	summaryViewport := common.PanelStyle
-	summaryViewportHeader := common.Highlight
-	summaryTableStyle := common.TableStyleBase
+	findingsViewport := common.PanelStyle
+	findingsViewportHeader := common.Highlight
+	findingsTableStyle := common.TableStyleBase
 	observationsViewport := common.PanelStyle
 	observationsViewportHeader := common.Highlight
 	observationsTableStyle := common.TableStyleBase
@@ -230,10 +256,10 @@ func (m Model) mainView() string {
 		selectedResultDialogBox = focusedDialogBox
 	case focusCompareSelection:
 		comparedResultDialogBox = focusedDialogBox
-	case focusSummary:
-		summaryViewport = focusedViewport
-		summaryViewportHeader = focusedViewportHeaderColor
-		summaryTableStyle = common.TableStyleActive
+	case focusFindings:
+		findingsViewport = focusedViewport
+		findingsViewportHeader = focusedViewportHeaderColor
+		findingsTableStyle = common.TableStyleActive
 	case focusObservations:
 		observationsViewport = focusedViewport
 		observationsViewportHeader = focusedViewportHeaderColor
@@ -254,19 +280,33 @@ func (m Model) mainView() string {
 	comparedResult := lipgloss.JoinHorizontal(lipgloss.Top, comparedResultLabel, comparedResultContent)
 
 	resultSelectionContent := lipgloss.JoinHorizontal(lipgloss.Top, selectedResult, comparedResult)
+	common.PrintToLog("selected result summary data:")
+	common.DumpToLog(m.selectedResult.summaryData)
+	// Summary section
+
+	findingsSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#3ad33c")).Render(fmt.Sprintf("%d", m.selectedResult.summaryData.numFindingsSatisfied))
+	findingsNotSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#e36750")).Render(fmt.Sprintf("%d", m.selectedResult.summaryData.numFindings-m.selectedResult.summaryData.numFindingsSatisfied))
+	observationsSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#3ad33c")).Render(fmt.Sprintf("%d", m.selectedResult.summaryData.numObservationsSatisfied))
+	observationsNotSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#e36750")).Render(fmt.Sprintf("%d", m.selectedResult.summaryData.numObservations-m.selectedResult.summaryData.numObservationsSatisfied))
+	summaryText := fmt.Sprintf("Summary: %d (%s/%s) Findings - %d (%s/%s) Observations",
+		m.selectedResult.summaryData.numFindings, findingsSatisfied, findingsNotSatisfied,
+		m.selectedResult.summaryData.numObservations, observationsSatisfied, observationsNotSatisfied,
+	)
+
+	summary := lipgloss.JoinHorizontal(lipgloss.Top, common.SummaryTextStyle.Render(summaryText))
 
 	// Add Tables
-	m.findingsSummary.Style = summaryViewport
-	m.findingsTable = m.findingsTable.WithBaseStyle(summaryTableStyle)
+	m.findingsSummary.Style = findingsViewport
+	m.findingsTable = m.findingsTable.WithBaseStyle(findingsTableStyle)
 	m.findingsSummary.SetContent(m.findingsTable.View())
-	summaryPanel := fmt.Sprintf("%s\n%s", common.HeaderView("Summary", m.findingsSummary.Width-common.PanelStyle.GetPaddingRight(), summaryViewportHeader), m.findingsSummary.View())
+	findingsPanel := fmt.Sprintf("%s\n%s", common.HeaderView("Findings", m.findingsSummary.Width-common.PanelStyle.GetPaddingRight(), findingsViewportHeader), m.findingsSummary.View())
 
 	m.observationsSummary.Style = observationsViewport
 	m.observationsTable = m.observationsTable.WithBaseStyle(observationsTableStyle)
 	m.observationsSummary.SetContent(m.observationsTable.View())
 	observationsPanel := fmt.Sprintf("%s\n%s", common.HeaderView("Observations", m.observationsSummary.Width-common.PanelStyle.GetPaddingRight(), observationsViewportHeader), m.observationsSummary.View())
 
-	bottomContent := lipgloss.JoinVertical(lipgloss.Top, summaryPanel, observationsPanel)
+	bottomContent := lipgloss.JoinVertical(lipgloss.Top, summary, findingsPanel, observationsPanel)
 
 	return lipgloss.JoinVertical(lipgloss.Top, helpView, resultSelectionContent, bottomContent)
 }
@@ -274,11 +314,17 @@ func (m Model) mainView() string {
 func (m *Model) UpdateResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) {
 	var selectedResult result
 	results := make([]result, 0)
-	findingsRows := make([]table.Row, 0)
-	observationsRows := make([]table.Row, 0)
 
 	if assessmentResults != nil {
 		for _, r := range assessmentResults.Results {
+			numFindings := len(*r.Findings)
+			numObservations := len(*r.Observations)
+			numFindingsSatisfied := 0
+			numObservationsSatisfied := 0
+			findingsRows := make([]table.Row, 0)
+			observationsRows := make([]table.Row, 0)
+			observationsMap := make(map[string]table.Row)
+
 			for _, f := range *r.Findings {
 				findingString, err := common.ToYamlString(f)
 				if err != nil {
@@ -291,9 +337,18 @@ func (m *Model) UpdateResults(assessmentResults *oscalTypes_1_1_2.AssessmentResu
 						relatedObs = append(relatedObs, o.ObservationUuid)
 					}
 				}
+				if f.Target.Status.State == "satisfied" {
+					numFindingsSatisfied++
+				}
+
+				style, exists := satisfiedColors[f.Target.Status.State]
+				if !exists {
+					style = satisfiedColors["other"]
+				}
+
 				findingsRows = append(findingsRows, table.NewRow(table.RowData{
 					columnKeyName:        f.Target.TargetId,
-					columnKeyStatus:      f.Target.Status.State,
+					columnKeyStatus:      table.NewStyledCell(f.Target.Status.State, style),
 					columnKeyDescription: strings.ReplaceAll(f.Description, "\n", " "),
 					// Hidden columns
 					columnKeyFinding:    findingString,
@@ -314,22 +369,32 @@ func (m *Model) UpdateResults(assessmentResults *oscalTypes_1_1_2.AssessmentResu
 							remarks.WriteString(strings.ReplaceAll(e.Remarks, "\n", " "))
 						}
 					}
+					if state == "satisfied" {
+						numObservationsSatisfied++
+					}
 				}
+
+				style, exists := satisfiedColors[state]
+				if !exists {
+					style = satisfiedColors["other"]
+				}
+
 				obsString, err := common.ToYamlString(o)
 				if err != nil {
 					common.PrintToLog("error converting observation to yaml: %v", err)
 					obsString = ""
 				}
-				observationsRows = append(observationsRows, table.NewRow(table.RowData{
+				obsRow := table.NewRow(table.RowData{
 					columnKeyName:        GetReadableObservationName(o.Description),
-					columnKeyStatus:      state,
+					columnKeyStatus:      table.NewStyledCell(state, style),
 					columnKeyDescription: remarks.String(),
 					// Hidden columns
 					columnKeyObservation:  obsString,
 					columnKeyValidationId: findUuid(o.Description),
-				}))
+				})
+				observationsRows = append(observationsRows, obsRow)
+				observationsMap[o.UUID] = obsRow
 			}
-			observationsMap := makeObservationMap(r.Observations)
 
 			results = append(results, result{
 				uuid:             r.UUID,
@@ -340,34 +405,18 @@ func (m *Model) UpdateResults(assessmentResults *oscalTypes_1_1_2.AssessmentResu
 				findingsRows:     findingsRows,
 				observationsRows: observationsRows,
 				observationsMap:  observationsMap,
+				summaryData: summaryData{
+					numFindings:              numFindings,
+					numObservations:          numObservations,
+					numFindingsSatisfied:     numFindingsSatisfied,
+					numObservationsSatisfied: numObservationsSatisfied,
+				},
 			})
 		}
 	}
 
 	if len(results) != 0 {
 		selectedResult = results[0]
-		// observationMap := makeObservationMap(selectedResult.observations)
-		// if selectedResult.findings != nil {
-		// 	for _, f := range *selectedResult.findings {
-		// 		// get the related observations
-		// 		observations := make([]observation, 0)
-		// 		if f.RelatedObservations != nil {
-		// 			for _, o := range *f.RelatedObservations {
-		// 				observationUuid := o.ObservationUuid
-		// 				if _, ok := observationMap[observationUuid]; ok {
-		// 					observations = append(observations, observationMap[observationUuid])
-		// 				}
-		// 			}
-		// 		}
-		// 		findings = append(findings, finding{
-		// 			title:        f.Title,
-		// 			uuid:         f.UUID,
-		// 			controlId:    f.Target.TargetId,
-		// 			state:        f.Target.Status.State,
-		// 			observations: observations,
-		// 		})
-		// 	}
-		// }
 	}
 
 	// Set up tables
@@ -415,8 +464,19 @@ func (m *Model) UpdateResults(assessmentResults *oscalTypes_1_1_2.AssessmentResu
 // 	resultComparisonMap := pkgResult.NewResultComparisonMap(*result, *comparedResult)
 // }
 
+func (m *Model) getObservationsByFinding(relatedObs []string) []table.Row {
+	obsRows := make([]table.Row, 0)
+	for _, uuid := range relatedObs {
+		if obsRow, ok := m.selectedResult.observationsMap[uuid]; ok {
+			obsRows = append(obsRows, obsRow)
+		}
+	}
+
+	return obsRows
+}
+
 func getComparedResults(results []result, selectedResult result) []string {
-	comparedResults := []string{"No Compared Result"}
+	comparedResults := []string{"None"}
 	for _, r := range results {
 		if r.uuid != selectedResult.uuid {
 			comparedResults = append(comparedResults, getResultText(r))
@@ -432,33 +492,33 @@ func getResultText(result result) string {
 	return fmt.Sprintf("%s - %s", result.title, result.timestamp)
 }
 
-func makeObservationMap(observations *[]oscalTypes_1_1_2.Observation) map[string]observation {
-	observationMap := make(map[string]observation)
+// func makeObservationMap(observations *[]oscalTypes_1_1_2.Observation) map[string]observation {
+// 	observationMap := make(map[string]observation)
 
-	for _, o := range *observations {
-		validationId := findUuid(o.Description)
-		state := "not-satisfied"
-		remarks := strings.Builder{}
-		if o.RelevantEvidence != nil {
-			for _, re := range *o.RelevantEvidence {
-				if re.Description == "Result: satisfied\n" {
-					state = "satisfied"
-				} else if re.Description == "Result: not-satisfied\n" {
-					state = "not-satisfied"
-				}
-				remarks.WriteString(re.Remarks)
-			}
-		}
-		observationMap[o.UUID] = observation{
-			uuid:         o.UUID,
-			description:  o.Description,
-			remarks:      remarks.String(),
-			state:        state,
-			validationId: validationId,
-		}
-	}
-	return observationMap
-}
+// 	for _, o := range *observations {
+// 		validationId := findUuid(o.Description)
+// 		state := "not-satisfied"
+// 		remarks := strings.Builder{}
+// 		if o.RelevantEvidence != nil {
+// 			for _, re := range *o.RelevantEvidence {
+// 				if re.Description == "Result: satisfied\n" {
+// 					state = "satisfied"
+// 				} else if re.Description == "Result: not-satisfied\n" {
+// 					state = "not-satisfied"
+// 				}
+// 				remarks.WriteString(re.Remarks)
+// 			}
+// 		}
+// 		observationMap[o.UUID] = observation{
+// 			uuid:         o.UUID,
+// 			description:  o.Description,
+// 			remarks:      remarks.String(),
+// 			state:        state,
+// 			validationId: validationId,
+// 		}
+// 	}
+// 	return observationMap
+// }
 
 func findUuid(input string) string {
 	uuidPattern := `[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}`

@@ -34,6 +34,12 @@ var assessmentKeys = keys{
 	Up:            common.PickerKeys.Up,
 	Down:          common.PickerKeys.Down,
 	Detail:        common.CommonKeys.Detail,
+	Filter:        common.TableKeys.Filter,
+}
+
+var assessmentKeysInFilter = keys{
+	Confirm: common.CommonKeys.Confirm,
+	Cancel:  common.CommonKeys.Cancel,
 }
 
 var (

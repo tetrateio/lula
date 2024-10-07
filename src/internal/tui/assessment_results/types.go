@@ -32,7 +32,7 @@ const (
 	noFocus focus = iota
 	focusResultSelection
 	focusCompareSelection
-	focusSummary
+	focusFindings
 	focusObservations
 )
 
@@ -45,20 +45,14 @@ type result struct {
 	observations     *[]oscalTypes_1_1_2.Observation
 	findingsRows     []table.Row
 	observationsRows []table.Row
-	observationsMap  map[string]observation
+	observationsMap  map[string]table.Row
+	summaryData      summaryData
 }
 
-type finding struct {
-	title, uuid, controlId, state string
-	observations                  []observation
-}
-
-func (i finding) Title() string       { return i.controlId }
-func (i finding) Description() string { return i.state }
-func (i finding) FilterValue() string { return i.title }
-
-type observation struct {
-	uuid, description, remarks, state, validationId string
+type summaryData struct {
+	numFindings, numObservations int
+	numFindingsSatisfied         int
+	numObservationsSatisfied     int
 }
 
 func (m *Model) Close() {
@@ -76,7 +70,7 @@ func (m *Model) UpdateSizing(height, width int) {
 	totalHeight := m.height
 
 	topSectionHeight := common.HelpStyle(m.width).GetHeight() + common.DialogBoxStyle.GetHeight()
-	bottomSectionHeight := totalHeight - topSectionHeight
+	bottomSectionHeight := totalHeight - topSectionHeight - 2 // 2 for summary height
 	bottomPanelHeight := (bottomSectionHeight - 2*common.PanelTitleStyle.GetHeight() - 2*common.PanelTitleStyle.GetVerticalMargins()) / 2
 	panelWidth := width - 4
 	panelInternalWidth := panelWidth - common.PanelStyle.GetHorizontalPadding() - common.PanelStyle.GetHorizontalMargins() - 2
@@ -101,7 +95,7 @@ func (m *Model) updateKeyBindings() {
 	m.updateFocusHelpKeys()
 
 	switch m.focus {
-	case focusSummary:
+	case focusFindings:
 		m.findingsTable = m.findingsTable.WithKeyMap(common.FocusedTableKeyMap())
 		m.findingsTable = m.findingsTable.Focused(true)
 	case focusObservations:
@@ -123,7 +117,7 @@ func (m *Model) outOfFocus() {
 
 	for _, f := range []focus{focusMinusOne, focusPlusOne} {
 		switch f {
-		case focusSummary:
+		case focusFindings:
 			m.findingsTable = m.findingsTable.WithKeyMap(common.UnfocusedTableKeyMap())
 			m.findingsTable = m.findingsTable.Focused(false)
 		case focusObservations:
@@ -135,7 +129,7 @@ func (m *Model) outOfFocus() {
 
 func (m *Model) updateFocusHelpKeys() {
 	switch m.focus {
-	case focusSummary:
+	case focusFindings:
 		m.help.ShortHelp = common.ShortHelpTable
 		m.help.FullHelpOneLine = common.FullHelpTableOneLine
 		m.help.FullHelp = common.FullHelpTable

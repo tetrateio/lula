@@ -118,6 +118,9 @@ var (
 			Margin(1).
 			Width(30)
 
+	SummaryTextStyle = lipgloss.NewStyle().
+				Foreground(Text).Margin(1)
+
 	// Table Styles
 	TableStyles = table.Styles{
 		Header:   lipgloss.NewStyle().Foreground(Highlight).Bold(true),
