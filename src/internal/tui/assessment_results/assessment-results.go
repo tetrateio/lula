@@ -151,27 +151,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 			case common.ContainsKey(k, m.keys.Detail.Keys()):
-				common.PrintToLog("detail key pressed")
 				switch m.focus {
 				case focusFindings:
 					selected := m.findingsTable.HighlightedRow().Data[columnKeyFinding].(string)
-					common.PrintToLog("selected: \n%s", selected)
 					return m, func() tea.Msg {
 						return common.DetailOpenMsg{
-							Content: selected,
-							Height:  (m.height + common.TabOffset),
-							Width:   m.width,
+							Content:      selected,
+							WindowHeight: (m.height + common.TabOffset),
+							WindowWidth:  m.width,
 						}
 					}
 
 				case focusObservations:
 					selected := m.observationsTable.HighlightedRow().Data[columnKeyObservation].(string)
-					common.PrintToLog("selected: \n%s", selected)
 					return m, func() tea.Msg {
 						return common.DetailOpenMsg{
-							Content: selected,
-							Height:  (m.height + common.TabOffset),
-							Width:   m.width,
+							Content:      selected,
+							WindowHeight: (m.height + common.TabOffset),
+							WindowWidth:  m.width,
 						}
 					}
 				}
@@ -280,10 +277,8 @@ func (m Model) mainView() string {
 	comparedResult := lipgloss.JoinHorizontal(lipgloss.Top, comparedResultLabel, comparedResultContent)
 
 	resultSelectionContent := lipgloss.JoinHorizontal(lipgloss.Top, selectedResult, comparedResult)
-	common.PrintToLog("selected result summary data:")
-	common.DumpToLog(m.selectedResult.summaryData)
-	// Summary section
 
+	// Write summary
 	findingsSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#3ad33c")).Render(fmt.Sprintf("%d", m.selectedResult.summaryData.numFindingsSatisfied))
 	findingsNotSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#e36750")).Render(fmt.Sprintf("%d", m.selectedResult.summaryData.numFindings-m.selectedResult.summaryData.numFindingsSatisfied))
 	observationsSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#3ad33c")).Render(fmt.Sprintf("%d", m.selectedResult.summaryData.numObservationsSatisfied))

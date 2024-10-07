@@ -16,8 +16,6 @@ type keys struct {
 	SwitchModels  key.Binding
 	Detail        key.Binding
 	Filter        key.Binding
-	Up            key.Binding
-	Down          key.Binding
 	Help          key.Binding
 	Quit          key.Binding
 }
@@ -31,8 +29,6 @@ var assessmentKeys = keys{
 	NavigateLeft:  common.CommonKeys.NavigateLeft,
 	NavigateRight: common.CommonKeys.NavigateRight,
 	SwitchModels:  common.CommonKeys.NavigateModels,
-	Up:            common.PickerKeys.Up,
-	Down:          common.PickerKeys.Down,
 	Detail:        common.CommonKeys.Detail,
 	Filter:        common.TableKeys.Filter,
 }

@@ -104,7 +104,7 @@ var (
 	OverlayStyle = lipgloss.NewStyle().
 			Border(lipgloss.DoubleBorder(), true).
 			BorderForeground(Focused).
-			Padding(1, 1)
+			Padding(1, 1, 0, 1)
 
 	OverlayWarnStyle = lipgloss.NewStyle().
 				Border(lipgloss.DoubleBorder(), true).
