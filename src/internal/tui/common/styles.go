@@ -119,7 +119,7 @@ var (
 			Width(30)
 
 	SummaryTextStyle = lipgloss.NewStyle().
-				Foreground(Text).Margin(1)
+				Foreground(Text).Margin(0, 1)
 
 	// Table Styles
 	TableStyles = table.Styles{

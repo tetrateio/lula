@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/internal/tui/common"
+	"github.com/defenseunicorns/lula/src/pkg/common/oscal"
 	"github.com/evertras/bubble-table/table"
 )
 
@@ -394,6 +395,7 @@ func (m *Model) UpdateResults(assessmentResults *oscalTypes_1_1_2.AssessmentResu
 			results = append(results, result{
 				uuid:             r.UUID,
 				title:            r.Title,
+				oscalResult:      &r,
 				timestamp:        r.Start.Format(time.RFC3339),
 				findings:         r.Findings,
 				observations:     r.Observations,
@@ -481,10 +483,24 @@ func getComparedResults(results []result, selectedResult result) []string {
 }
 
 func getResultText(result result) string {
+	var resultText strings.Builder
 	if result.uuid == "" {
 		return "No Result Selected"
 	}
-	return fmt.Sprintf("%s - %s", result.title, result.timestamp)
+	resultText.WriteString(result.title)
+	if result.oscalResult != nil {
+		thresholdFound, threshold := oscal.GetProp("threshold", oscal.LULA_NAMESPACE, result.oscalResult.Props)
+		if thresholdFound && threshold == "true" {
+			resultText.WriteString(", Threshold")
+		}
+		targetFound, target := oscal.GetProp("target", oscal.LULA_NAMESPACE, result.oscalResult.Props)
+		if targetFound {
+			resultText.WriteString(fmt.Sprintf(", %s", target))
+		}
+	}
+	resultText.WriteString(fmt.Sprintf(" - %s", result.timestamp))
+
+	return resultText.String()
 }
 
 // func makeObservationMap(observations *[]oscalTypes_1_1_2.Observation) map[string]observation {

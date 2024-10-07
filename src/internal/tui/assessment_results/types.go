@@ -41,6 +41,7 @@ var maxFocus = focusObservations
 type result struct {
 	uuid, title      string
 	timestamp        string
+	oscalResult      *oscalTypes_1_1_2.Result
 	findings         *[]oscalTypes_1_1_2.Finding
 	observations     *[]oscalTypes_1_1_2.Observation
 	findingsRows     []table.Row
