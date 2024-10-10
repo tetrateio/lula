@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/mattn/go-runewidth"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
