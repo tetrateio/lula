@@ -39,7 +39,7 @@ func NewComponentDefinitionModel(oscalComponent *oscalTypes_1_1_2.ComponentDefin
 
 	if oscalComponent != nil {
 		// TODO: Run composition?
-		resourceStore := composition.NewResourceStoreFromBackMatter(oscalComponent.BackMatter)
+		resourceStore := composition.NewResourceStoreFromBackMatter(nil, oscalComponent.BackMatter)
 
 		if oscalComponent.Components != nil {
 			for cIdx, c := range *oscalComponent.Components {
