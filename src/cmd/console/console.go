@@ -16,6 +16,12 @@ import (
 var consoleHelp = `
 To view an OSCAL model in the Console:
 	lula console -f /path/to/oscal-component.yaml
+
+To view multiple OSCAL models in the Console:
+	lula console -f /path/to/oscal-component.yaml,/path/to/oscal-assessment-results.yaml
+
+To specify an output file to save any changes made to the component definition:
+	lula console -f /path/to/oscal-component.yaml -c /path/to/output.yaml
 `
 
 var consoleLong = `
