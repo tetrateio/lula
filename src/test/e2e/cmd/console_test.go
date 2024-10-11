@@ -27,4 +27,9 @@ func TestConsoleCommand(t *testing.T) {
 		err := test(t, "-f", "../../unit/common/validation/validation.opa.yaml")
 		require.Error(t, err)
 	})
+
+	t.Run("Console run with invalid output component file - error", func(t *testing.T) {
+		err := test(t, "-f", "../../unit/common/oscal/valid-component.yaml", "-c", "../../unit/common/validation/validation.opa.yaml")
+		require.Error(t, err)
+	})
 }

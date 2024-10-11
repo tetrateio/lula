@@ -25,6 +25,7 @@ interact with the OSCAL documents in a more intuitive and visual way.
 
 func ConsoleCommand() *cobra.Command {
 	var inputFiles []string
+	var componentOutputFile string
 
 	consoleCmd := &cobra.Command{
 		Use:     "console",
@@ -33,9 +34,23 @@ func ConsoleCommand() *cobra.Command {
 		Long:    consoleLong,
 		Example: consoleHelp,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			models, modelFiles, err := GetModelsByFiles(inputFiles)
+			setOutputFiles := make(map[string]string)
+			// Check if output files are specified - Add more as needed
+			if componentOutputFile != "" {
+				setOutputFiles["component"] = componentOutputFile
+			}
+
+			models, modelFiles, err := GetModelsByFiles(inputFiles, setOutputFiles)
 			if err != nil {
 				return err
+			}
+
+			// Check validity of all output model files
+			for _, outputFile := range modelFiles {
+				_, err = oscal.ValidOSCALModelAtPath(outputFile)
+				if err != nil {
+					return fmt.Errorf("invalid OSCAL model at output file: %v", err)
+				}
 			}
 
 			// TODO: need to integrate with the log file handled by messages
@@ -60,10 +75,11 @@ func ConsoleCommand() *cobra.Command {
 
 	consoleCmd.Flags().StringSliceVarP(&inputFiles, "input-files", "f", []string{}, "the path to the target OSCAL models, comma separated")
 	consoleCmd.MarkFlagRequired("input-files")
+	consoleCmd.Flags().StringVarP(&componentOutputFile, "component-output", "c", "", "the path to the component definition output file")
 	return consoleCmd
 }
 
-func GetModelsByFiles(inputFiles []string) (map[string]*oscalTypes_1_1_2.OscalModels, map[string]string, error) {
+func GetModelsByFiles(inputFiles []string, setOutputFiles map[string]string) (map[string]*oscalTypes_1_1_2.OscalModels, map[string]string, error) {
 	var models = make(map[string]*oscalTypes_1_1_2.OscalModels)
 	var modelFiles = make(map[string]string)
 
@@ -99,6 +115,11 @@ func GetModelsByFiles(inputFiles []string) (map[string]*oscalTypes_1_1_2.OscalMo
 			models[modelType] = oscalModel
 			modelFiles[modelType] = inputFile
 		}
+	}
+
+	// If any output file name is specified, overwrite the modelFiles field
+	for k, v := range setOutputFiles {
+		modelFiles[k] = v
 	}
 
 	return models, modelFiles, nil
