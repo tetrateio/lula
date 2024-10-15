@@ -49,7 +49,7 @@ func (m DetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.UpdateSizing(int(float64(msg.Height)*heightScale), int(float64(msg.Width)*widthScale))
+		m.updateSizing(int(float64(msg.Height)*heightScale), int(float64(msg.Width)*widthScale))
 
 	case tea.KeyMsg:
 		k := msg.String()
@@ -64,7 +64,7 @@ func (m DetailModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Open = true
 		m.contentViewport.GotoTop()
 		m.contentViewport.SetContent(msg.Content)
-		m.UpdateSizing(int(float64(msg.WindowHeight)*heightScale), int(float64(msg.WindowWidth)*widthScale))
+		m.updateSizing(int(float64(msg.WindowHeight)*heightScale), int(float64(msg.WindowWidth)*widthScale))
 	}
 
 	m.contentViewport, cmd = m.contentViewport.Update(msg)
@@ -83,7 +83,7 @@ func (m DetailModel) View() string {
 	return overlayDetailStyle.Render(detailContent)
 }
 
-func (m *DetailModel) UpdateSizing(height, width int) {
+func (m *DetailModel) updateSizing(height, width int) {
 	m.height = height
 	m.width = width
 
