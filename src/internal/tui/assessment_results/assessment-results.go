@@ -3,6 +3,7 @@ package assessmentresults
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -155,6 +156,7 @@ func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result 
 func GetResultComparison(selectedResult, comparedResult result) ([]table.Row, []table.Row) {
 	findingsRows := make([]table.Row, 0)
 	observationsRows := make([]table.Row, 0)
+	observations := make([]string, 0)
 
 	if selectedResult.OscalResult != nil && comparedResult.OscalResult != nil {
 		resultComparison := pkgResult.NewResultComparisonMap(*selectedResult.OscalResult, *comparedResult.OscalResult)
@@ -182,8 +184,10 @@ func GetResultComparison(selectedResult, comparedResult result) ([]table.Row, []
 			// Make compared observation row
 			for _, op := range v.ObservationPairs {
 				if op != nil {
+					obsUuid := ""
 					var comparedObservationRow table.Row
 					if comparedObservationRow, ok = selectedResult.ObservationsMap[op.ObservationUuid]; ok {
+						obsUuid = op.ObservationUuid
 						comparedObservationRow.Data[ColumnKeyStatusChange] = op.StateChange
 						if r, ok := comparedResult.ObservationsMap[op.ComparedObservationUuid]; ok {
 							comparedObservationRow.Data[ColumnKeyComparedObservation] = r.Data[ColumnKeyObservation]
@@ -194,11 +198,16 @@ func GetResultComparison(selectedResult, comparedResult result) ([]table.Row, []
 					} else {
 						if comparedObservationRow, ok = comparedResult.ObservationsMap[op.ComparedObservationUuid]; ok {
 							// Observation was removed
+							obsUuid = op.ComparedObservationUuid
 							comparedObservationRow.Data[ColumnKeyStatusChange] = op.StateChange
 							comparedObservationRow.Data[ColumnKeyComparedObservation] = ""
 						}
 					}
-					observationsRows = append(observationsRows, comparedObservationRow)
+					// Check if observation has already been added
+					if obsUuid != "" && !slices.Contains(observations, obsUuid) {
+						observations = append(observations, obsUuid)
+						observationsRows = append(observationsRows, comparedObservationRow)
+					}
 				}
 			}
 		}
