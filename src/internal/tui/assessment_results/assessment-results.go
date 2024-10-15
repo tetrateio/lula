@@ -23,22 +23,22 @@ var (
 )
 
 type result struct {
-	uuid, title      string
-	timestamp        string
-	oscalResult      *oscalTypes_1_1_2.Result
-	findings         *[]oscalTypes_1_1_2.Finding
-	observations     *[]oscalTypes_1_1_2.Observation
-	findingsRows     []table.Row
-	observationsRows []table.Row
-	findingsMap      map[string]table.Row
-	observationsMap  map[string]table.Row
-	summaryData      summaryData
+	Uuid, Title      string
+	Timestamp        string
+	OscalResult      *oscalTypes_1_1_2.Result
+	Findings         *[]oscalTypes_1_1_2.Finding
+	Observations     *[]oscalTypes_1_1_2.Observation
+	FindingsRows     []table.Row
+	ObservationsRows []table.Row
+	FindingsMap      map[string]table.Row
+	ObservationsMap  map[string]table.Row
+	SummaryData      summaryData
 }
 
 type summaryData struct {
-	numFindings, numObservations int
-	numFindingsSatisfied         int
-	numObservationsSatisfied     int
+	NumFindings, NumObservations int
+	NumFindingsSatisfied         int
+	NumObservationsSatisfied     int
 }
 
 func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result {
@@ -77,12 +77,12 @@ func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result 
 				}
 
 				findingRow := table.NewRow(table.RowData{
-					columnKeyName:        f.Target.TargetId,
-					columnKeyStatus:      table.NewStyledCell(f.Target.Status.State, style),
-					columnKeyDescription: strings.ReplaceAll(f.Description, "\n", " "),
+					ColumnKeyName:        f.Target.TargetId,
+					ColumnKeyStatus:      table.NewStyledCell(f.Target.Status.State, style),
+					ColumnKeyDescription: strings.ReplaceAll(f.Description, "\n", " "),
 					// Hidden columns
-					columnKeyFinding:    findingString,
-					columnKeyRelatedObs: relatedObs,
+					ColumnKeyFinding:    findingString,
+					ColumnKeyRelatedObs: relatedObs,
 				})
 				findingsRows = append(findingsRows, findingRow)
 				findingsMap[f.Target.TargetId] = findingRow
@@ -117,33 +117,33 @@ func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result 
 					obsString = ""
 				}
 				obsRow := table.NewRow(table.RowData{
-					columnKeyName:        GetReadableObservationName(o.Description),
-					columnKeyStatus:      table.NewStyledCell(state, style),
-					columnKeyDescription: remarks.String(),
+					ColumnKeyName:        GetReadableObservationName(o.Description),
+					ColumnKeyStatus:      table.NewStyledCell(state, style),
+					ColumnKeyDescription: remarks.String(),
 					// Hidden columns
-					columnKeyObservation:  obsString,
-					columnKeyValidationId: findUuid(o.Description),
+					ColumnKeyObservation:  obsString,
+					ColumnKeyValidationId: findUuid(o.Description),
 				})
 				observationsRows = append(observationsRows, obsRow)
 				observationsMap[o.UUID] = obsRow
 			}
 
 			results = append(results, result{
-				uuid:             r.UUID,
-				title:            r.Title,
-				oscalResult:      &r,
-				timestamp:        r.Start.Format(time.RFC3339),
-				findings:         r.Findings,
-				observations:     r.Observations,
-				findingsRows:     findingsRows,
-				observationsRows: observationsRows,
-				findingsMap:      findingsMap,
-				observationsMap:  observationsMap,
-				summaryData: summaryData{
-					numFindings:              numFindings,
-					numObservations:          numObservations,
-					numFindingsSatisfied:     numFindingsSatisfied,
-					numObservationsSatisfied: numObservationsSatisfied,
+				Uuid:             r.UUID,
+				Title:            r.Title,
+				OscalResult:      &r,
+				Timestamp:        r.Start.Format(time.RFC3339),
+				Findings:         r.Findings,
+				Observations:     r.Observations,
+				FindingsRows:     findingsRows,
+				ObservationsRows: observationsRows,
+				FindingsMap:      findingsMap,
+				ObservationsMap:  observationsMap,
+				SummaryData: summaryData{
+					NumFindings:              numFindings,
+					NumObservations:          numObservations,
+					NumFindingsSatisfied:     numFindingsSatisfied,
+					NumObservationsSatisfied: numObservationsSatisfied,
 				},
 			})
 		}
@@ -156,8 +156,8 @@ func GetResultComparison(selectedResult, comparedResult result) ([]table.Row, []
 	findingsRows := make([]table.Row, 0)
 	observationsRows := make([]table.Row, 0)
 
-	if selectedResult.oscalResult != nil && comparedResult.oscalResult != nil {
-		resultComparison := pkgResult.NewResultComparisonMap(*comparedResult.oscalResult, *selectedResult.oscalResult)
+	if selectedResult.OscalResult != nil && comparedResult.OscalResult != nil {
+		resultComparison := pkgResult.NewResultComparisonMap(*selectedResult.OscalResult, *comparedResult.OscalResult)
 		for k, v := range resultComparison {
 			// Make compared finding row
 			comparedFindingString, err := common.ToYamlString(v.ComparedFinding)
@@ -167,14 +167,14 @@ func GetResultComparison(selectedResult, comparedResult result) ([]table.Row, []
 			}
 			var comparedFindingRow table.Row
 			var ok bool
-			if comparedFindingRow, ok = selectedResult.findingsMap[k]; ok {
-				comparedFindingRow.Data[columnKeyComparedFinding] = comparedFindingString
-				comparedFindingRow.Data[columnKeyStatusChange] = v.StateChange
+			if comparedFindingRow, ok = selectedResult.FindingsMap[k]; ok {
+				comparedFindingRow.Data[ColumnKeyComparedFinding] = comparedFindingString
+				comparedFindingRow.Data[ColumnKeyStatusChange] = v.StateChange
 			} else {
-				if comparedFindingRow, ok = comparedResult.findingsMap[k]; ok {
-					comparedFindingRow.Data[columnKeyFinding] = ""
-					comparedFindingRow.Data[columnKeyComparedFinding] = comparedFindingString
-					comparedFindingRow.Data[columnKeyStatusChange] = v.StateChange
+				if comparedFindingRow, ok = comparedResult.FindingsMap[k]; ok {
+					comparedFindingRow.Data[ColumnKeyFinding] = ""
+					comparedFindingRow.Data[ColumnKeyComparedFinding] = comparedFindingString
+					comparedFindingRow.Data[ColumnKeyStatusChange] = v.StateChange
 				}
 			}
 			findingsRows = append(findingsRows, comparedFindingRow)
@@ -183,11 +183,19 @@ func GetResultComparison(selectedResult, comparedResult result) ([]table.Row, []
 			for _, op := range v.ObservationPairs {
 				if op != nil {
 					var comparedObservationRow table.Row
-					if comparedObservationRow, ok = selectedResult.observationsMap[op.ObservationUuid]; ok {
-						comparedObservationRow.Data[columnKeyStatusChange] = op.StateChange
+					if comparedObservationRow, ok = selectedResult.ObservationsMap[op.ObservationUuid]; ok {
+						comparedObservationRow.Data[ColumnKeyStatusChange] = op.StateChange
+						if r, ok := comparedResult.ObservationsMap[op.ComparedObservationUuid]; ok {
+							comparedObservationRow.Data[ColumnKeyComparedObservation] = r.Data[ColumnKeyObservation]
+						} else {
+							// Observation is new
+							comparedObservationRow.Data[ColumnKeyComparedObservation] = ""
+						}
 					} else {
-						if comparedObservationRow, ok = comparedResult.observationsMap[op.ComparedObservationUuid]; ok {
-							comparedObservationRow.Data[columnKeyStatusChange] = op.StateChange
+						if comparedObservationRow, ok = comparedResult.ObservationsMap[op.ComparedObservationUuid]; ok {
+							// Observation was removed
+							comparedObservationRow.Data[ColumnKeyStatusChange] = op.StateChange
+							comparedObservationRow.Data[ColumnKeyComparedObservation] = ""
 						}
 					}
 					observationsRows = append(observationsRows, comparedObservationRow)
@@ -202,7 +210,7 @@ func GetResultComparison(selectedResult, comparedResult result) ([]table.Row, []
 func getComparedResults(results []result, selectedResult result) []string {
 	comparedResults := []string{"None"}
 	for _, r := range results {
-		if r.uuid != selectedResult.uuid {
+		if r.Uuid != selectedResult.Uuid {
 			comparedResults = append(comparedResults, getResultText(r))
 		}
 	}
@@ -211,21 +219,21 @@ func getComparedResults(results []result, selectedResult result) []string {
 
 func getResultText(result result) string {
 	var resultText strings.Builder
-	if result.uuid == "" {
+	if result.Uuid == "" {
 		return "No Result Selected"
 	}
-	resultText.WriteString(result.title)
-	if result.oscalResult != nil {
-		thresholdFound, threshold := oscal.GetProp("threshold", oscal.LULA_NAMESPACE, result.oscalResult.Props)
+	resultText.WriteString(result.Title)
+	if result.OscalResult != nil {
+		thresholdFound, threshold := oscal.GetProp("threshold", oscal.LULA_NAMESPACE, result.OscalResult.Props)
 		if thresholdFound && threshold == "true" {
 			resultText.WriteString(", Threshold")
 		}
-		targetFound, target := oscal.GetProp("target", oscal.LULA_NAMESPACE, result.oscalResult.Props)
+		targetFound, target := oscal.GetProp("target", oscal.LULA_NAMESPACE, result.OscalResult.Props)
 		if targetFound {
 			resultText.WriteString(fmt.Sprintf(", %s", target))
 		}
 	}
-	resultText.WriteString(fmt.Sprintf(" - %s", result.timestamp))
+	resultText.WriteString(fmt.Sprintf(" - %s", result.Timestamp))
 
 	return resultText.String()
 }

@@ -18,7 +18,11 @@ const (
 	height     = common.DefaultHeight
 	width      = common.DefaultWidth
 
-	validAssessmentResults = "../../../test/unit/common/oscal/valid-assessment-results.yaml"
+	validAssessmentResults               = "../../../test/unit/common/oscal/valid-assessment-results.yaml"
+	validAssessmentResultsMulti          = "../../../test/unit/common/oscal/valid-assessment-results-multi.yaml"
+	validAssessmentResultsRemovedFinding = "../../../test/unit/common/oscal/valid-assessment-results-removed-finding.yaml"
+	validAssessmentResultsAddedFinding   = "../../../test/unit/common/oscal/valid-assessment-results-added-finding.yaml"
+	validAssessmentResultsRemovedObs     = "../../../test/unit/common/oscal/valid-assessment-results-removed-observation.yaml"
 )
 
 func init() {

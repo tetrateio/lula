@@ -2,6 +2,7 @@ package assessmentresults
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -22,16 +23,16 @@ const (
 const (
 	resultPicker                 common.PickerKind = "result"
 	comparedResultPicker         common.PickerKind = "compared result"
-	columnKeyName                                  = "name"
-	columnKeyStatus                                = "status"
-	columnKeyDescription                           = "description"
-	columnKeyStatusChange                          = "status_change"
-	columnKeyFinding                               = "finding"
-	columnKeyRelatedObs                            = "related_obs"
-	columnKeyComparedFinding                       = "compared_finding"
-	columnKeyObservation                           = "observation"
-	columnKeyComparedObservation                   = "compared_observation"
-	columnKeyValidationId                          = "validation_id"
+	ColumnKeyName                                  = "name"
+	ColumnKeyStatus                                = "status"
+	ColumnKeyDescription                           = "description"
+	ColumnKeyStatusChange                          = "status_change"
+	ColumnKeyFinding                               = "finding"
+	ColumnKeyRelatedObs                            = "related_obs"
+	ColumnKeyComparedFinding                       = "compared_finding"
+	ColumnKeyObservation                           = "observation"
+	ColumnKeyComparedObservation                   = "compared_observation"
+	ColumnKeyValidationId                          = "validation_id"
 )
 
 type Model struct {
@@ -49,6 +50,7 @@ type Model struct {
 	findingsTable         table.Model
 	observationsSummary   viewport.Model
 	observationsTable     table.Model
+	currentObservations   []table.Row
 	detailView            common.DetailModel
 	width                 int
 	height                int
@@ -143,7 +145,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case focusFindings:
 					// Select the observations
 					if !m.detailView.Open && m.findingsTable.HighlightedRow().Data != nil {
-						m.observationsTable = m.observationsTable.WithRows(m.getObservationsByFinding(m.findingsTable.HighlightedRow().Data[columnKeyRelatedObs].([]string)))
+						m.observationsTable = m.observationsTable.WithRows(m.getObservationsByFinding(m.findingsTable.HighlightedRow().Data[ColumnKeyRelatedObs].([]string)))
 					}
 				}
 
@@ -151,17 +153,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.keys = assessmentKeys
 				switch m.focus {
 				case focusFindings:
-					m.observationsTable = m.observationsTable.WithRows(m.selectedResult.observationsRows)
+					m.observationsTable = m.observationsTable.WithRows(m.currentObservations)
 				}
+				m.updateKeyBindings()
 
 			case common.ContainsKey(k, m.keys.Detail.Keys()):
 				switch m.focus {
 				case focusFindings:
 					if m.findingsTable.HighlightedRow().Data != nil {
-						selected := m.findingsTable.HighlightedRow().Data[columnKeyFinding].(string)
+						m.findingsTable.WithKeyMap(common.UnfocusedTableKeyMap())
 						return m, func() tea.Msg {
 							return common.DetailOpenMsg{
-								Content:      selected,
+								Content:      m.getFindingsDetail(),
 								WindowHeight: (m.height + common.TabOffset),
 								WindowWidth:  m.width,
 							}
@@ -170,10 +173,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				case focusObservations:
 					if m.observationsTable.HighlightedRow().Data != nil {
-						selected := m.observationsTable.HighlightedRow().Data[columnKeyObservation].(string)
+						m.observationsTable.WithKeyMap(common.UnfocusedTableKeyMap())
 						return m, func() tea.Msg {
 							return common.DetailOpenMsg{
-								Content:      selected,
+								Content:      m.getObsDetail(),
 								WindowHeight: (m.height + common.TabOffset),
 								WindowWidth:  m.width,
 							}
@@ -197,7 +200,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.From == resultPicker {
 				m.selectedResultIndex = msg.Selected
 				m.selectedResult = m.results[m.selectedResultIndex]
-				m.findingsTable, m.observationsTable = getSingleResultTables(m.selectedResult.findingsRows, m.selectedResult.observationsRows)
+				m.findingsTable, m.observationsTable = getSingleResultTables(m.selectedResult.FindingsRows, m.selectedResult.ObservationsRows)
+				m.currentObservations = m.selectedResult.ObservationsRows
 				// Update comparison
 				m.comparedResult = result{}
 				m.comparedResultsPicker.UpdateItems(getComparedResults(m.results, m.selectedResult))
@@ -209,7 +213,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					} else {
 						m.comparedResult = m.results[msg.Selected-1]
 					}
-					m.findingsTable, m.observationsTable = getComparedResultTables(m.selectedResult, m.comparedResult)
+					m.findingsTable, m.observationsTable, m.currentObservations = getComparedResultTables(m.selectedResult, m.comparedResult)
 				}
 			}
 		}
@@ -299,16 +303,26 @@ func (m Model) mainView() string {
 	resultSelectionContent := lipgloss.JoinHorizontal(lipgloss.Top, selectedResult, comparedResult)
 
 	// Write summary
-	findingsSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#3ad33c")).Render(fmt.Sprintf("%d", m.selectedResult.summaryData.numFindingsSatisfied))
-	findingsNotSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#e36750")).Render(fmt.Sprintf("%d", m.selectedResult.summaryData.numFindings-m.selectedResult.summaryData.numFindingsSatisfied))
-	observationsSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#3ad33c")).Render(fmt.Sprintf("%d", m.selectedResult.summaryData.numObservationsSatisfied))
-	observationsNotSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#e36750")).Render(fmt.Sprintf("%d", m.selectedResult.summaryData.numObservations-m.selectedResult.summaryData.numObservationsSatisfied))
+	findingsSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#3ad33c")).Render(fmt.Sprintf("%d", m.selectedResult.SummaryData.NumFindingsSatisfied))
+	findingsNotSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#e36750")).Render(fmt.Sprintf("%d", m.selectedResult.SummaryData.NumFindings-m.selectedResult.SummaryData.NumFindingsSatisfied))
+	observationsSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#3ad33c")).Render(fmt.Sprintf("%d", m.selectedResult.SummaryData.NumObservationsSatisfied))
+	observationsNotSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#e36750")).Render(fmt.Sprintf("%d", m.selectedResult.SummaryData.NumObservations-m.selectedResult.SummaryData.NumObservationsSatisfied))
 	summaryText := fmt.Sprintf("Summary: %d (%s/%s) Findings - %d (%s/%s) Observations",
-		m.selectedResult.summaryData.numFindings, findingsSatisfied, findingsNotSatisfied,
-		m.selectedResult.summaryData.numObservations, observationsSatisfied, observationsNotSatisfied,
+		m.selectedResult.SummaryData.NumFindings, findingsSatisfied, findingsNotSatisfied,
+		m.selectedResult.SummaryData.NumObservations, observationsSatisfied, observationsNotSatisfied,
 	)
 
 	// Write compared summary
+	if m.comparedResult.OscalResult != nil {
+		comparedFindingsSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#3ad33c")).Render(fmt.Sprintf("%d", m.comparedResult.SummaryData.NumFindingsSatisfied))
+		comparedFindingsNotSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#e36750")).Render(fmt.Sprintf("%d", m.comparedResult.SummaryData.NumFindings-m.comparedResult.SummaryData.NumFindingsSatisfied))
+		comparedObservationsSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#3ad33c")).Render(fmt.Sprintf("%d", m.comparedResult.SummaryData.NumObservationsSatisfied))
+		comparedObservationsNotSatisfied := lipgloss.NewStyle().Foreground(lipgloss.Color("#e36750")).Render(fmt.Sprintf("%d", m.comparedResult.SummaryData.NumObservations-m.comparedResult.SummaryData.NumObservationsSatisfied))
+		summaryText += fmt.Sprintf(" | Compared Summary: %d (%s/%s) Findings - %d (%s/%s) Observations",
+			m.comparedResult.SummaryData.NumFindings, comparedFindingsSatisfied, comparedFindingsNotSatisfied,
+			m.comparedResult.SummaryData.NumObservations, comparedObservationsSatisfied, comparedObservationsNotSatisfied,
+		)
+	}
 
 	summary := lipgloss.JoinHorizontal(lipgloss.Top, common.SummaryTextStyle.Render(summaryText))
 
@@ -361,7 +375,7 @@ func (m *Model) UpdateWithAssessmentResults(assessmentResults *oscalTypes_1_1_2.
 	m.resultsPicker.UpdateItems(resultItems)
 	m.comparedResultsPicker.UpdateItems(getComparedResults(results, selectedResult))
 
-	m.findingsTable, m.observationsTable = getSingleResultTables(selectedResult.findingsRows, selectedResult.observationsRows)
+	m.findingsTable, m.observationsTable = getSingleResultTables(selectedResult.FindingsRows, selectedResult.ObservationsRows)
 }
 
 func (m *Model) updateSizing(height, width int) {
@@ -393,7 +407,7 @@ func (m *Model) inOverlay() bool {
 func (m *Model) getObservationsByFinding(relatedObs []string) []table.Row {
 	obsRows := make([]table.Row, 0)
 	for _, uuid := range relatedObs {
-		if obsRow, ok := m.selectedResult.observationsMap[uuid]; ok {
+		if obsRow, ok := m.selectedResult.ObservationsMap[uuid]; ok {
 			obsRows = append(obsRows, obsRow)
 		}
 	}
@@ -403,61 +417,93 @@ func (m *Model) getObservationsByFinding(relatedObs []string) []table.Row {
 
 func getSingleResultTables(findingsRows, observationsRows []table.Row) (findingsTable table.Model, observationsTable table.Model) {
 	findingsTableColumns := []table.Column{
-		table.NewFlexColumn(columnKeyName, "Control", 1).WithFiltered(true),
-		table.NewFlexColumn(columnKeyStatus, "Status", 1),
-		table.NewFlexColumn(columnKeyDescription, "Description", 4),
+		table.NewFlexColumn(ColumnKeyName, "Control", 1).WithFiltered(true),
+		table.NewFlexColumn(ColumnKeyStatus, "Status", 1),
+		table.NewFlexColumn(ColumnKeyDescription, "Description", 4),
 	}
 
 	observationsTableColumns := []table.Column{
-		table.NewFlexColumn(columnKeyName, "Observation", 1).WithFiltered(true),
-		table.NewFlexColumn(columnKeyStatus, "Status", 1),
-		table.NewFlexColumn(columnKeyDescription, "Remarks", 4),
+		table.NewFlexColumn(ColumnKeyName, "Observation", 1).WithFiltered(true),
+		table.NewFlexColumn(ColumnKeyStatus, "Status", 1),
+		table.NewFlexColumn(ColumnKeyDescription, "Remarks", 4),
 	}
 
 	findingsTable = table.New(findingsTableColumns).
 		WithRows(findingsRows).
 		WithBaseStyle(common.TableStyleBase).
 		Filtered(true).
-		SortByAsc(columnKeyName)
+		SortByAsc(ColumnKeyName)
 
 	observationsTable = table.New(observationsTableColumns).
 		WithRows(observationsRows).
 		WithBaseStyle(common.TableStyleBase).
 		Filtered(true).
-		SortByAsc(columnKeyName)
+		SortByAsc(ColumnKeyName)
 
 	return findingsTable, observationsTable
 }
 
-func getComparedResultTables(selectedResult, comparedResult result) (findingsTable table.Model, observationsTable table.Model) {
+func getComparedResultTables(selectedResult, comparedResult result) (findingsTable table.Model, observationsTable table.Model, currentObservations []table.Row) {
 	findingsRows, observationsRows := GetResultComparison(selectedResult, comparedResult)
 
 	// Set up tables
 	findingsTableColumns := []table.Column{
-		table.NewFlexColumn(columnKeyName, "Control", 1).WithFiltered(true),
-		table.NewFlexColumn(columnKeyStatus, "Status", 1),
-		table.NewFlexColumn(columnKeyStatusChange, "Status Change", 1).WithFiltered(true),
-		table.NewFlexColumn(columnKeyDescription, "Description", 4),
+		table.NewFlexColumn(ColumnKeyName, "Control", 1).WithFiltered(true),
+		table.NewFlexColumn(ColumnKeyStatus, "Status", 1),
+		table.NewFlexColumn(ColumnKeyStatusChange, "Status Change", 1).WithFiltered(true),
+		table.NewFlexColumn(ColumnKeyDescription, "Description", 4),
 	}
 
 	observationsTableColumns := []table.Column{
-		table.NewFlexColumn(columnKeyName, "Observation", 1).WithFiltered(true),
-		table.NewFlexColumn(columnKeyStatus, "Status", 1),
-		table.NewFlexColumn(columnKeyStatusChange, "Status Change", 1).WithFiltered(true),
-		table.NewFlexColumn(columnKeyDescription, "Remarks", 4),
+		table.NewFlexColumn(ColumnKeyName, "Observation", 1).WithFiltered(true),
+		table.NewFlexColumn(ColumnKeyStatus, "Status", 1),
+		table.NewFlexColumn(ColumnKeyStatusChange, "Status Change", 1).WithFiltered(true),
+		table.NewFlexColumn(ColumnKeyDescription, "Remarks", 4),
 	}
 
 	findingsTable = table.New(findingsTableColumns).
 		WithRows(findingsRows).
 		WithBaseStyle(common.TableStyleBase).
 		Filtered(true).
-		SortByAsc(columnKeyName)
+		SortByAsc(ColumnKeyName)
 
 	observationsTable = table.New(observationsTableColumns).
 		WithRows(observationsRows).
 		WithBaseStyle(common.TableStyleBase).
 		Filtered(true).
-		SortByAsc(columnKeyName)
+		SortByAsc(ColumnKeyName)
 
-	return findingsTable, observationsTable
+	return findingsTable, observationsTable, observationsRows
+}
+
+func (m *Model) getFindingsDetail() string {
+	var text strings.Builder
+	important := lipgloss.NewStyle().Bold(true).
+		Foreground(common.Special)
+
+	text.WriteString(fmt.Sprintf("%s\n\n", important.Render("Finding: "+m.findingsTable.HighlightedRow().Data[ColumnKeyName].(string))))
+	text.WriteString(m.findingsTable.HighlightedRow().Data[ColumnKeyFinding].(string))
+
+	if m.comparedResult.OscalResult != nil {
+		text.WriteString(fmt.Sprintf("\n\n%s\n\n", important.Render("Compared Finding: "+m.findingsTable.HighlightedRow().Data[ColumnKeyName].(string))))
+		text.WriteString(m.findingsTable.HighlightedRow().Data[ColumnKeyComparedFinding].(string))
+	}
+
+	return text.String()
+}
+
+func (m *Model) getObsDetail() string {
+	var text strings.Builder
+	important := lipgloss.NewStyle().Bold(true).
+		Foreground(common.Special)
+
+	text.WriteString(fmt.Sprintf("%s\n\n", important.Render("Observation: "+m.observationsTable.HighlightedRow().Data[ColumnKeyName].(string))))
+	text.WriteString(m.observationsTable.HighlightedRow().Data[ColumnKeyObservation].(string))
+
+	if m.comparedResult.OscalResult != nil {
+		text.WriteString(fmt.Sprintf("\n\n%s\n\n", important.Render("Compared Observation: "+m.observationsTable.HighlightedRow().Data[ColumnKeyName].(string))))
+		text.WriteString(m.observationsTable.HighlightedRow().Data[ColumnKeyComparedObservation].(string))
+	}
+
+	return text.String()
 }
