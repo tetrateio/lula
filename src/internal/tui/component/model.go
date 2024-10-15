@@ -50,7 +50,7 @@ const (
 	frameworkPickerKind common.PickerKind = "framework"
 )
 
-func InitialModel(oscalComponent *oscalTypes_1_1_2.ComponentDefinition) Model {
+func NewComponentDefinitionModel(oscalComponent *oscalTypes_1_1_2.ComponentDefinition) Model {
 	var selectedComponent component
 	var selectedFramework framework
 	viewedControls := make([]blist.Item, 0)
