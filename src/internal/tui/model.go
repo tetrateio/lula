@@ -53,8 +53,8 @@ func NewOSCALModel(modelMap map[string]*oscalTypes_1_1_2.OscalCompleteSchema, fi
 	}
 
 	// get the right model types assigned to their respective tea models
-	componentModel := component.NewComponentDefinitionModel(nil)
 	writtenComponentModel := new(oscalTypes_1_1_2.ComponentDefinition)
+	componentModel := component.NewComponentDefinitionModel(writtenComponentModel)
 	componentFilePath := "component.yaml"
 	assessmentResultsModel := assessmentresults.NewAssessmentResultsModel(nil)
 
