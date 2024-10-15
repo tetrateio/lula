@@ -4,8 +4,7 @@
          ║                                                                                                                                                                                    ║         
          ║                                                                                                                                                                                    ║         
          ║ Domain: kubernetes                                                                                                                                                                 ║         
-         ║ CreateResources: []                                                                                                                                                                ║         
-         ║ Resources:                                                                                                                                                                         ║         
+         ║ resources:                                                                                                                                                                         ║         
          ║     - name: jsoncm                                                                                                                                                                 ║         
          ║       description: ""                                                                                                                                                              ║         
          ║       resource-rule:                                                                                                                                                               ║         
@@ -50,6 +49,7 @@
          ║       resource-rule:                                                                                                                                                               ║         
          ║         name: example-pod                                                                                                                                                          ║         
          ║         group: ""                                                                                                                                                                  ║         
+         ║         version: v1                                                                                                                                                                ║         
          ║                                                                                                                                                                                    ║         
          ║                                                                                                                                                                                    ║         
          ║ ↑/k scroll up • ↓/j scroll down • esc cancel                                                                                                                                       ║         
