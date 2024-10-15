@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -62,7 +61,7 @@ func NewOSCALModel(oscalModel *oscalTypes_1_1_2.OscalCompleteSchema, oscalFilePa
 	}
 
 	writtenOscalModel := new(oscalTypes_1_1_2.OscalCompleteSchema)
-	err := DeepCopy(oscalModel, writtenOscalModel)
+	err := common.DeepCopy(oscalModel, writtenOscalModel)
 	if err != nil {
 		common.PrintToLog("error creating deep copy of oscal model: %v", err)
 	}
@@ -122,7 +121,7 @@ func (m *model) writeOscalModel() tea.Msg {
 	}
 	common.PrintToLog("model saved")
 
-	DeepCopy(m.oscalModel, m.writtenOscalModel)
+	common.DeepCopy(m.oscalModel, m.writtenOscalModel)
 	return common.SaveSuccessMsg{}
 }
 
@@ -310,12 +309,4 @@ func (m model) loadTabModel(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.planOfActionAndMilestones, nil
 	}
 	return nil, nil
-}
-
-func DeepCopy(src, dst interface{}) error {
-	data, err := json.Marshal(src)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, dst)
 }

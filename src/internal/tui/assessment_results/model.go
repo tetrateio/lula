@@ -42,6 +42,7 @@ type Model struct {
 	results               []result
 	resultsPicker         common.PickerModel
 	selectedResult        result
+	selectedResultIndex   int
 	comparedResultsPicker common.PickerModel
 	comparedResult        result
 	findingsSummary       viewport.Model
@@ -102,7 +103,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.help.ShowAll = !m.help.ShowAll
 
 			case common.ContainsKey(k, m.keys.NavigateLeft.Keys()):
-				if !m.resultsPicker.Open && !m.comparedResultsPicker.Open && !m.detailView.Open {
+				if !m.inOverlay() {
 					if m.focus == 0 {
 						m.focus = maxFocus
 					} else {
@@ -112,7 +113,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 			case common.ContainsKey(k, m.keys.NavigateRight.Keys()):
-				if !m.resultsPicker.Open && !m.comparedResultsPicker.Open && !m.detailView.Open {
+				if !m.inOverlay() {
 					m.focus = (m.focus + 1) % (maxFocus + 1)
 					m.updateKeyBindings()
 				}
@@ -130,7 +131,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 
 				case focusCompareSelection:
-					if len(m.results) > 1 && !m.comparedResultsPicker.Open {
+					if len(m.results) > 0 && !m.comparedResultsPicker.Open {
 						// TODO: get compared result items to send with picker open
 						return m, func() tea.Msg {
 							return common.PickerOpenMsg{
@@ -194,11 +195,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case common.PickerItemSelected:
 		if m.open {
 			if msg.From == resultPicker {
-				m.selectedResult = m.results[msg.Selected]
-				m.observationsTable = m.observationsTable.WithRows(m.selectedResult.observationsRows)
-				m.findingsTable = m.findingsTable.WithRows(m.selectedResult.findingsRows)
+				m.selectedResultIndex = msg.Selected
+				m.selectedResult = m.results[m.selectedResultIndex]
+				m.findingsTable, m.observationsTable = getSingleResultTables(m.selectedResult.findingsRows, m.selectedResult.observationsRows)
+				// Update comparison
+				m.comparedResult = result{}
+				m.comparedResultsPicker.UpdateItems(getComparedResults(m.results, m.selectedResult))
+			} else if msg.From == comparedResultPicker {
+				// First item will always be "None", so do nothing if selected
+				if msg.Selected != 0 {
+					if m.selectedResultIndex < msg.Selected {
+						m.comparedResult = m.results[msg.Selected]
+					} else {
+						m.comparedResult = m.results[msg.Selected-1]
+					}
+					m.findingsTable, m.observationsTable = getComparedResultTables(m.selectedResult, m.comparedResult)
+				}
 			}
-			// TODO: add logic for compared result picker
 		}
 	}
 
@@ -295,6 +308,8 @@ func (m Model) mainView() string {
 		m.selectedResult.summaryData.numObservations, observationsSatisfied, observationsNotSatisfied,
 	)
 
+	// Write compared summary
+
 	summary := lipgloss.JoinHorizontal(lipgloss.Top, common.SummaryTextStyle.Render(summaryText))
 
 	// Add Tables
@@ -322,6 +337,10 @@ func (m *Model) Open(height, width int) {
 	m.updateSizing(height, width)
 }
 
+func (m *Model) GetDimensions() (height, width int) {
+	return m.height, m.width
+}
+
 func (m *Model) UpdateWithAssessmentResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) {
 	var selectedResult result
 
@@ -330,31 +349,6 @@ func (m *Model) UpdateWithAssessmentResults(assessmentResults *oscalTypes_1_1_2.
 	if len(results) != 0 {
 		selectedResult = results[0]
 	}
-
-	// Set up tables
-	findingsTableColumns := []table.Column{
-		table.NewFlexColumn(columnKeyName, "Control", 1).WithFiltered(true),
-		table.NewFlexColumn(columnKeyStatus, "Status", 1),
-		table.NewFlexColumn(columnKeyDescription, "Description", 4),
-	}
-
-	observationsTableColumns := []table.Column{
-		table.NewFlexColumn(columnKeyName, "Observation", 1).WithFiltered(true),
-		table.NewFlexColumn(columnKeyStatus, "Status", 1),
-		table.NewFlexColumn(columnKeyDescription, "Remarks", 4),
-	}
-
-	findingsTable := table.New(findingsTableColumns).
-		WithRows(selectedResult.findingsRows).
-		WithBaseStyle(common.TableStyleBase).
-		Filtered(true).
-		SortByAsc(columnKeyName)
-
-	observationsTable := table.New(observationsTableColumns).
-		WithRows(selectedResult.observationsRows).
-		WithBaseStyle(common.TableStyleBase).
-		Filtered(true).
-		SortByAsc(columnKeyName)
 
 	// Update model parameters
 	resultItems := make([]string, len(results))
@@ -365,16 +359,10 @@ func (m *Model) UpdateWithAssessmentResults(assessmentResults *oscalTypes_1_1_2.
 	m.results = results
 	m.selectedResult = selectedResult
 	m.resultsPicker.UpdateItems(resultItems)
-	comparedResultItems := getComparedResults(results, selectedResult)
-	m.comparedResultsPicker.UpdateItems(comparedResultItems)
+	m.comparedResultsPicker.UpdateItems(getComparedResults(results, selectedResult))
 
-	m.observationsTable = observationsTable
-	m.findingsTable = findingsTable
+	m.findingsTable, m.observationsTable = getSingleResultTables(selectedResult.findingsRows, selectedResult.observationsRows)
 }
-
-// func (m *Model) UpdateWithComparedResults(result, comparedResult *oscalTypes_1_1_2.Result) {
-// 	resultComparisonMap := pkgResult.NewResultComparisonMap(*result, *comparedResult)
-// }
 
 func (m *Model) updateSizing(height, width int) {
 	m.height = height
@@ -398,8 +386,8 @@ func (m *Model) updateSizing(height, width int) {
 	m.observationsTable = m.observationsTable.WithTargetWidth(panelInternalWidth).WithPageSize(observationsRowHeight)
 }
 
-func (m *Model) GetDimensions() (height, width int) {
-	return m.height, m.width
+func (m *Model) inOverlay() bool {
+	return m.resultsPicker.Open || m.comparedResultsPicker.Open || m.detailView.Open
 }
 
 func (m *Model) getObservationsByFinding(relatedObs []string) []table.Row {
@@ -411,4 +399,65 @@ func (m *Model) getObservationsByFinding(relatedObs []string) []table.Row {
 	}
 
 	return obsRows
+}
+
+func getSingleResultTables(findingsRows, observationsRows []table.Row) (findingsTable table.Model, observationsTable table.Model) {
+	findingsTableColumns := []table.Column{
+		table.NewFlexColumn(columnKeyName, "Control", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyStatus, "Status", 1),
+		table.NewFlexColumn(columnKeyDescription, "Description", 4),
+	}
+
+	observationsTableColumns := []table.Column{
+		table.NewFlexColumn(columnKeyName, "Observation", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyStatus, "Status", 1),
+		table.NewFlexColumn(columnKeyDescription, "Remarks", 4),
+	}
+
+	findingsTable = table.New(findingsTableColumns).
+		WithRows(findingsRows).
+		WithBaseStyle(common.TableStyleBase).
+		Filtered(true).
+		SortByAsc(columnKeyName)
+
+	observationsTable = table.New(observationsTableColumns).
+		WithRows(observationsRows).
+		WithBaseStyle(common.TableStyleBase).
+		Filtered(true).
+		SortByAsc(columnKeyName)
+
+	return findingsTable, observationsTable
+}
+
+func getComparedResultTables(selectedResult, comparedResult result) (findingsTable table.Model, observationsTable table.Model) {
+	findingsRows, observationsRows := GetResultComparison(selectedResult, comparedResult)
+
+	// Set up tables
+	findingsTableColumns := []table.Column{
+		table.NewFlexColumn(columnKeyName, "Control", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyStatus, "Status", 1),
+		table.NewFlexColumn(columnKeyStatusChange, "Status Change", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyDescription, "Description", 4),
+	}
+
+	observationsTableColumns := []table.Column{
+		table.NewFlexColumn(columnKeyName, "Observation", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyStatus, "Status", 1),
+		table.NewFlexColumn(columnKeyStatusChange, "Status Change", 1).WithFiltered(true),
+		table.NewFlexColumn(columnKeyDescription, "Remarks", 4),
+	}
+
+	findingsTable = table.New(findingsTableColumns).
+		WithRows(findingsRows).
+		WithBaseStyle(common.TableStyleBase).
+		Filtered(true).
+		SortByAsc(columnKeyName)
+
+	observationsTable = table.New(observationsTableColumns).
+		WithRows(observationsRows).
+		WithBaseStyle(common.TableStyleBase).
+		Filtered(true).
+		SortByAsc(columnKeyName)
+
+	return findingsTable, observationsTable
 }

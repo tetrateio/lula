@@ -3,10 +3,17 @@ package assessmentresults_test
 import (
 	"testing"
 
+	"github.com/defenseunicorns/lula/src/internal/testhelpers"
 	assessmentresults "github.com/defenseunicorns/lula/src/internal/tui/assessment_results"
+	"github.com/defenseunicorns/lula/src/internal/tui/component"
 )
 
-// TODO: add test for GetResults
+func TestGetResults(t *testing.T) {
+	oscalModel := testhelpers.OscalFromPath(t, validAssessmentResults)
+	results := assessmentresults.GetResults(oscalModel.AssessmentResults)
+
+	if len(results) != 2 {
+}
 
 func TestGetReadableDesc(t *testing.T) {
 	t.Parallel()

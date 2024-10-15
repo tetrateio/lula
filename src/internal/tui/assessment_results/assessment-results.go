@@ -10,6 +10,7 @@ import (
 	oscalTypes_1_1_2 "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-2"
 	"github.com/defenseunicorns/lula/src/internal/tui/common"
 	"github.com/defenseunicorns/lula/src/pkg/common/oscal"
+	pkgResult "github.com/defenseunicorns/lula/src/pkg/common/result"
 	"github.com/evertras/bubble-table/table"
 )
 
@@ -29,6 +30,7 @@ type result struct {
 	observations     *[]oscalTypes_1_1_2.Observation
 	findingsRows     []table.Row
 	observationsRows []table.Row
+	findingsMap      map[string]table.Row
 	observationsMap  map[string]table.Row
 	summaryData      summaryData
 }
@@ -51,6 +53,7 @@ func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result 
 			findingsRows := make([]table.Row, 0)
 			observationsRows := make([]table.Row, 0)
 			observationsMap := make(map[string]table.Row)
+			findingsMap := make(map[string]table.Row)
 
 			for _, f := range *r.Findings {
 				findingString, err := common.ToYamlString(f)
@@ -73,14 +76,16 @@ func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result 
 					style = satisfiedColors["other"]
 				}
 
-				findingsRows = append(findingsRows, table.NewRow(table.RowData{
+				findingRow := table.NewRow(table.RowData{
 					columnKeyName:        f.Target.TargetId,
 					columnKeyStatus:      table.NewStyledCell(f.Target.Status.State, style),
 					columnKeyDescription: strings.ReplaceAll(f.Description, "\n", " "),
 					// Hidden columns
 					columnKeyFinding:    findingString,
 					columnKeyRelatedObs: relatedObs,
-				}))
+				})
+				findingsRows = append(findingsRows, findingRow)
+				findingsMap[f.Target.TargetId] = findingRow
 			}
 			for _, o := range *r.Observations {
 				state := "undefined"
@@ -132,6 +137,7 @@ func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result 
 				observations:     r.Observations,
 				findingsRows:     findingsRows,
 				observationsRows: observationsRows,
+				findingsMap:      findingsMap,
 				observationsMap:  observationsMap,
 				summaryData: summaryData{
 					numFindings:              numFindings,
@@ -144,6 +150,53 @@ func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result 
 	}
 
 	return results
+}
+
+func GetResultComparison(selectedResult, comparedResult result) ([]table.Row, []table.Row) {
+	findingsRows := make([]table.Row, 0)
+	observationsRows := make([]table.Row, 0)
+
+	if selectedResult.oscalResult != nil && comparedResult.oscalResult != nil {
+		resultComparison := pkgResult.NewResultComparisonMap(*comparedResult.oscalResult, *selectedResult.oscalResult)
+		for k, v := range resultComparison {
+			// Make compared finding row
+			comparedFindingString, err := common.ToYamlString(v.ComparedFinding)
+			if err != nil {
+				common.PrintToLog("error converting finding to yaml: %v", err)
+				comparedFindingString = ""
+			}
+			var comparedFindingRow table.Row
+			var ok bool
+			if comparedFindingRow, ok = selectedResult.findingsMap[k]; ok {
+				comparedFindingRow.Data[columnKeyComparedFinding] = comparedFindingString
+				comparedFindingRow.Data[columnKeyStatusChange] = v.StateChange
+			} else {
+				if comparedFindingRow, ok = comparedResult.findingsMap[k]; ok {
+					comparedFindingRow.Data[columnKeyFinding] = ""
+					comparedFindingRow.Data[columnKeyComparedFinding] = comparedFindingString
+					comparedFindingRow.Data[columnKeyStatusChange] = v.StateChange
+				}
+			}
+			findingsRows = append(findingsRows, comparedFindingRow)
+
+			// Make compared observation row
+			for _, op := range v.ObservationPairs {
+				if op != nil {
+					var comparedObservationRow table.Row
+					if comparedObservationRow, ok = selectedResult.observationsMap[op.ObservationUuid]; ok {
+						comparedObservationRow.Data[columnKeyStatusChange] = op.StateChange
+					} else {
+						if comparedObservationRow, ok = comparedResult.observationsMap[op.ComparedObservationUuid]; ok {
+							comparedObservationRow.Data[columnKeyStatusChange] = op.StateChange
+						}
+					}
+					observationsRows = append(observationsRows, comparedObservationRow)
+				}
+			}
+		}
+	}
+
+	return findingsRows, observationsRows
 }
 
 func getComparedResults(results []result, selectedResult result) []string {
