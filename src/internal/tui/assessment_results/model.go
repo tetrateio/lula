@@ -57,6 +57,12 @@ type Model struct {
 	height                int
 }
 
+type ModelOpenMsg struct {
+	Height int
+	Width  int
+}
+type ModelCloseMsg struct{}
+
 func NewAssessmentResultsModel(assessmentResults *oscalTypes_1_1_2.AssessmentResults) Model {
 	help := common.NewHelpModel(false)
 	help.OneLine = true
@@ -91,155 +97,157 @@ func (m Model) Init() tea.Cmd {
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
-	if m.open {
-		switch msg := msg.(type) {
-		case tea.WindowSizeMsg:
-			m.updateSizing(msg.Height-common.TabOffset, msg.Width)
 
-		case tea.KeyMsg:
+	switch msg := msg.(type) {
+	case ModelOpenMsg:
+		m.Open(msg.Height, msg.Width)
 
-			common.DumpToLog(msg)
-			k := msg.String()
-			switch k {
-			case common.ContainsKey(k, m.keys.Help.Keys()):
-				m.help.ShowAll = !m.help.ShowAll
+	case tea.WindowSizeMsg:
+		m.updateSizing(msg.Height-common.TabOffset, msg.Width)
 
-			case common.ContainsKey(k, m.keys.NavigateLeft.Keys()):
-				if !m.inOverlay() {
-					if m.focus == 0 {
-						m.focus = maxFocus
-					} else {
-						m.focus--
-					}
-					m.updateKeyBindings()
-				}
+	case tea.KeyMsg:
 
-			case common.ContainsKey(k, m.keys.NavigateRight.Keys()):
-				if !m.inOverlay() {
-					m.focus = (m.focus + 1) % (maxFocus + 1)
-					m.updateKeyBindings()
-				}
+		common.DumpToLog(msg)
+		k := msg.String()
+		switch k {
+		case common.ContainsKey(k, m.keys.Help.Keys()):
+			m.help.ShowAll = !m.help.ShowAll
 
-			case common.ContainsKey(k, m.keys.Confirm.Keys()):
-				m.keys = assessmentKeys
-				switch m.focus {
-				case focusResultSelection:
-					if len(m.results) > 0 && !m.resultsPicker.Open {
-						return m, func() tea.Msg {
-							return common.PickerOpenMsg{
-								Kind: resultPicker,
-							}
-						}
-					}
-
-				case focusCompareSelection:
-					if len(m.results) > 0 && !m.comparedResultsPicker.Open {
-						// TODO: get compared result items to send with picker open
-						return m, func() tea.Msg {
-							return common.PickerOpenMsg{
-								Kind: comparedResultPicker,
-							}
-						}
-					}
-
-				case focusFindings:
-					// Select the observations
-					if !m.detailView.Open && m.findingsTable.HighlightedRow().Data != nil {
-						m.observationsTable = m.observationsTable.WithRows(m.getObservationsByFinding(m.findingsTable.HighlightedRow().Data[ColumnKeyRelatedObs].([]string)))
-					}
-				}
-
-			case common.ContainsKey(k, m.keys.Cancel.Keys()):
-				m.keys = assessmentKeys
-				switch m.focus {
-				case focusFindings:
-					m.observationsTable = m.observationsTable.WithRows(m.currentObservations)
+		case common.ContainsKey(k, m.keys.NavigateLeft.Keys()):
+			if !m.inOverlay() {
+				if m.focus == 0 {
+					m.focus = maxFocus
+				} else {
+					m.focus--
 				}
 				m.updateKeyBindings()
+			}
 
-			case common.ContainsKey(k, m.keys.Detail.Keys()):
-				switch m.focus {
-				case focusFindings:
-					if m.findingsTable.HighlightedRow().Data != nil {
-						m.findingsTable = m.findingsTable.WithKeyMap(common.UnfocusedTableKeyMap())
-						return m, func() tea.Msg {
-							return common.DetailOpenMsg{
-								Content:      m.getFindingsDetail(),
-								WindowHeight: (m.height + common.TabOffset),
-								WindowWidth:  m.width,
-							}
-						}
-					}
+		case common.ContainsKey(k, m.keys.NavigateRight.Keys()):
+			if !m.inOverlay() {
+				m.focus = (m.focus + 1) % (maxFocus + 1)
+				m.updateKeyBindings()
+			}
 
-				case focusObservations:
-					if m.observationsTable.HighlightedRow().Data != nil {
-						m.observationsTable = m.observationsTable.WithKeyMap(common.UnfocusedTableKeyMap())
-						return m, func() tea.Msg {
-							return common.DetailOpenMsg{
-								Content:      m.getObsDetail(),
-								WindowHeight: (m.height + common.TabOffset),
-								WindowWidth:  m.width,
-							}
+		case common.ContainsKey(k, m.keys.Confirm.Keys()):
+			m.keys = assessmentKeys
+			switch m.focus {
+			case focusResultSelection:
+				if len(m.results) > 0 && !m.resultsPicker.Open {
+					return m, func() tea.Msg {
+						return common.PickerOpenMsg{
+							Kind: resultPicker,
 						}
 					}
 				}
 
-			case common.ContainsKey(k, m.keys.Filter.Keys()):
-				// Lock keys during table filter
-				if m.focus == focusFindings && !m.detailView.Open {
-					m.keys = assessmentKeysInFilter
+			case focusCompareSelection:
+				if len(m.results) > 0 && !m.comparedResultsPicker.Open {
+					// TODO: get compared result items to send with picker open
+					return m, func() tea.Msg {
+						return common.PickerOpenMsg{
+							Kind: comparedResultPicker,
+						}
+					}
 				}
-				if m.focus == focusObservations && !m.detailView.Open {
-					m.keys = assessmentKeysInFilter
+
+			case focusFindings:
+				// Select the observations
+				if !m.detailView.Open && m.findingsTable.HighlightedRow().Data != nil {
+					m.observationsTable = m.observationsTable.WithRows(m.getObservationsByFinding(m.findingsTable.HighlightedRow().Data[ColumnKeyRelatedObs].([]string)))
 				}
 			}
 
-		case common.PickerItemSelected:
-			if msg.From == resultPicker {
-				m.selectedResultIndex = msg.Selected
-				m.selectedResult = m.results[m.selectedResultIndex]
-				m.findingsTable, m.observationsTable = getSingleResultTables(m.selectedResult.FindingsRows, m.selectedResult.ObservationsRows)
-				m.currentObservations = m.selectedResult.ObservationsRows
-				// Update comparison
-				m.comparedResult = result{}
-				m.comparedResultsPicker.UpdateItems(getComparedResults(m.results, m.selectedResult))
-			} else if msg.From == comparedResultPicker {
-				// First item will always be "None", so return single table if selected
-				if msg.Selected == 0 {
-					if m.comparedResult.OscalResult != nil {
-						m.findingsTable, m.observationsTable = getSingleResultTables(m.selectedResult.FindingsRows, m.selectedResult.ObservationsRows)
-						m.currentObservations = m.selectedResult.ObservationsRows
-						m.comparedResult = result{}
+		case common.ContainsKey(k, m.keys.Cancel.Keys()):
+			m.keys = assessmentKeys
+			switch m.focus {
+			case focusFindings:
+				m.observationsTable = m.observationsTable.WithRows(m.currentObservations)
+			}
+			m.updateKeyBindings()
+
+		case common.ContainsKey(k, m.keys.Detail.Keys()):
+			switch m.focus {
+			case focusFindings:
+				if m.findingsTable.HighlightedRow().Data != nil {
+					m.findingsTable = m.findingsTable.WithKeyMap(common.UnfocusedTableKeyMap())
+					return m, func() tea.Msg {
+						return common.DetailOpenMsg{
+							Content:      m.getFindingsDetail(),
+							WindowHeight: (m.height + common.TabOffset),
+							WindowWidth:  m.width,
+						}
 					}
-				} else {
-					if m.selectedResultIndex < msg.Selected {
-						m.comparedResult = m.results[msg.Selected]
-					} else {
-						m.comparedResult = m.results[msg.Selected-1]
-					}
-					m.findingsTable, m.observationsTable, m.currentObservations = getComparedResultTables(m.selectedResult, m.comparedResult)
 				}
+
+			case focusObservations:
+				if m.observationsTable.HighlightedRow().Data != nil {
+					m.observationsTable = m.observationsTable.WithKeyMap(common.UnfocusedTableKeyMap())
+					return m, func() tea.Msg {
+						return common.DetailOpenMsg{
+							Content:      m.getObsDetail(),
+							WindowHeight: (m.height + common.TabOffset),
+							WindowWidth:  m.width,
+						}
+					}
+				}
+			}
+
+		case common.ContainsKey(k, m.keys.Filter.Keys()):
+			// Lock keys during table filter
+			if m.focus == focusFindings && !m.detailView.Open {
+				m.keys = assessmentKeysInFilter
+			}
+			if m.focus == focusObservations && !m.detailView.Open {
+				m.keys = assessmentKeysInFilter
 			}
 		}
 
-		mdl, cmd := m.resultsPicker.Update(msg)
-		m.resultsPicker = mdl.(common.PickerModel)
-		cmds = append(cmds, cmd)
-
-		mdl, cmd = m.comparedResultsPicker.Update(msg)
-		m.comparedResultsPicker = mdl.(common.PickerModel)
-		cmds = append(cmds, cmd)
-
-		mdl, cmd = m.detailView.Update(msg)
-		m.detailView = mdl.(common.DetailModel)
-		cmds = append(cmds, cmd)
-
-		m.findingsTable, cmd = m.findingsTable.Update(msg)
-		cmds = append(cmds, cmd)
-
-		m.observationsTable, cmd = m.observationsTable.Update(msg)
-		cmds = append(cmds, cmd)
+	case common.PickerItemSelected:
+		if msg.From == resultPicker {
+			m.selectedResultIndex = msg.Selected
+			m.selectedResult = m.results[m.selectedResultIndex]
+			m.findingsTable, m.observationsTable = m.getSingleResultTables(m.selectedResult.FindingsRows, m.selectedResult.ObservationsRows)
+			m.currentObservations = m.selectedResult.ObservationsRows
+			// Update comparison
+			m.comparedResult = result{}
+			m.comparedResultsPicker.UpdateItems(getComparedResults(m.results, m.selectedResult))
+		} else if msg.From == comparedResultPicker {
+			// First item will always be "None", so return single table if selected
+			if msg.Selected == 0 {
+				if m.comparedResult.OscalResult != nil {
+					m.findingsTable, m.observationsTable = m.getSingleResultTables(m.selectedResult.FindingsRows, m.selectedResult.ObservationsRows)
+					m.currentObservations = m.selectedResult.ObservationsRows
+					m.comparedResult = result{}
+				}
+			} else {
+				if m.selectedResultIndex < msg.Selected {
+					m.comparedResult = m.results[msg.Selected]
+				} else {
+					m.comparedResult = m.results[msg.Selected-1]
+				}
+				m.findingsTable, m.observationsTable, m.currentObservations = m.getComparedResultTables(m.selectedResult, m.comparedResult)
+			}
+		}
 	}
+
+	mdl, cmd := m.resultsPicker.Update(msg)
+	m.resultsPicker = mdl.(common.PickerModel)
+	cmds = append(cmds, cmd)
+
+	mdl, cmd = m.comparedResultsPicker.Update(msg)
+	m.comparedResultsPicker = mdl.(common.PickerModel)
+	cmds = append(cmds, cmd)
+
+	mdl, cmd = m.detailView.Update(msg)
+	m.detailView = mdl.(common.DetailModel)
+	cmds = append(cmds, cmd)
+
+	m.findingsTable, cmd = m.findingsTable.Update(msg)
+	cmds = append(cmds, cmd)
+
+	m.observationsTable, cmd = m.observationsTable.Update(msg)
+	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
 }
@@ -254,10 +262,8 @@ func (m Model) View() string {
 	if m.detailView.Open {
 		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, m.detailView.View(), lipgloss.WithWhitespaceChars(" "))
 	}
-	if m.open {
-		return m.mainView()
-	}
-	return ""
+
+	return m.mainView()
 }
 
 func (m Model) mainView() string {
@@ -382,7 +388,7 @@ func (m *Model) UpdateWithAssessmentResults(assessmentResults *oscalTypes_1_1_2.
 	m.resultsPicker.UpdateItems(resultItems)
 	m.comparedResultsPicker.UpdateItems(getComparedResults(results, selectedResult))
 
-	m.findingsTable, m.observationsTable = getSingleResultTables(selectedResult.FindingsRows, selectedResult.ObservationsRows)
+	m.findingsTable, m.observationsTable = m.getSingleResultTables(selectedResult.FindingsRows, selectedResult.ObservationsRows)
 	m.currentObservations = selectedResult.ObservationsRows
 }
 
@@ -423,7 +429,7 @@ func (m *Model) getObservationsByFinding(relatedObs []string) []table.Row {
 	return obsRows
 }
 
-func getSingleResultTables(findingsRows, observationsRows []table.Row) (findingsTable table.Model, observationsTable table.Model) {
+func (m *Model) getSingleResultTables(findingsRows, observationsRows []table.Row) (findingsTable table.Model, observationsTable table.Model) {
 	findingsTableColumns := []table.Column{
 		table.NewFlexColumn(ColumnKeyName, "Control", 1).WithFiltered(true),
 		table.NewFlexColumn(ColumnKeyStatus, "Status", 1),
@@ -437,22 +443,29 @@ func getSingleResultTables(findingsRows, observationsRows []table.Row) (findings
 		table.NewFlexColumn(ColumnKeyDescription, "Remarks", 4),
 	}
 
+	findingsHeight, findingsWidth := getTableDimensions(m.findingsSummary.Height, m.findingsSummary.Width)
+	observationsHeight, observationsWidth := getTableDimensions(m.observationsSummary.Height, m.observationsSummary.Width)
+
 	findingsTable = table.New(findingsTableColumns).
 		WithRows(findingsRows).
 		WithBaseStyle(common.TableStyleBase).
 		Filtered(true).
-		SortByAsc(ColumnKeyName)
+		SortByAsc(ColumnKeyName).
+		WithTargetWidth(findingsWidth).
+		WithPageSize(findingsHeight)
 
 	observationsTable = table.New(observationsTableColumns).
 		WithRows(observationsRows).
 		WithBaseStyle(common.TableStyleBase).
 		Filtered(true).
-		SortByAsc(ColumnKeyName)
+		SortByAsc(ColumnKeyName).
+		WithTargetWidth(observationsWidth).
+		WithPageSize(observationsHeight)
 
 	return findingsTable, observationsTable
 }
 
-func getComparedResultTables(selectedResult, comparedResult result) (findingsTable table.Model, observationsTable table.Model, currentObservations []table.Row) {
+func (m *Model) getComparedResultTables(selectedResult, comparedResult result) (findingsTable table.Model, observationsTable table.Model, currentObservations []table.Row) {
 	findingsRows, observationsRows := GetResultComparison(selectedResult, comparedResult)
 
 	// Set up tables
@@ -471,19 +484,32 @@ func getComparedResultTables(selectedResult, comparedResult result) (findingsTab
 		table.NewFlexColumn(ColumnKeyDescription, "Remarks", 4),
 	}
 
+	findingsHeight, findingsWidth := getTableDimensions(m.findingsSummary.Height, m.findingsSummary.Width)
+	observationsHeight, observationsWidth := getTableDimensions(m.observationsSummary.Height, m.observationsSummary.Width)
+
 	findingsTable = table.New(findingsTableColumns).
 		WithRows(findingsRows).
 		WithBaseStyle(common.TableStyleBase).
 		Filtered(true).
-		SortByAsc(ColumnKeyName)
+		SortByAsc(ColumnKeyName).
+		WithTargetWidth(findingsWidth).
+		WithPageSize(findingsHeight)
 
 	observationsTable = table.New(observationsTableColumns).
 		WithRows(observationsRows).
 		WithBaseStyle(common.TableStyleBase).
 		Filtered(true).
-		SortByAsc(ColumnKeyName)
+		SortByAsc(ColumnKeyName).
+		WithTargetWidth(observationsWidth).
+		WithPageSize(observationsHeight)
 
 	return findingsTable, observationsTable, observationsRows
+}
+
+func getTableDimensions(parentHeight, parentWidth int) (height int, width int) {
+	height = parentHeight - common.PanelTitleStyle.GetHeight() - common.PanelStyle.GetVerticalPadding() - 6
+	width = parentWidth - common.PanelStyle.GetHorizontalPadding() - common.PanelStyle.GetHorizontalMargins() - 2
+	return height, width
 }
 
 func (m *Model) getFindingsDetail() string {

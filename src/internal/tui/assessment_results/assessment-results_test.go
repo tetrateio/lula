@@ -39,12 +39,23 @@ func TestGetResultsComparison(t *testing.T) {
 		// Not-Satisfied is new; Compared to Satisfied
 		findingsRows, observationsRows := assessmentresults.GetResultComparison(results[0], results[1])
 		require.Equal(t, 2, len(findingsRows))
-		assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, findingsRows[0].Data[assessmentresults.ColumnKeyStatusChange]) // Should be ID-1, was satisfied now not-satisfied
-		assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, findingsRows[1].Data[assessmentresults.ColumnKeyStatusChange]) // Should be ID-2, was satisfied now not-satisfied
+		require.Equal(t, 2, len(findingsRows))
+		for _, row := range findingsRows {
+			if row.Data[assessmentresults.ColumnKeyName] == "ID-1" {
+				assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, row.Data[assessmentresults.ColumnKeyStatusChange])
+			} else {
+				assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, row.Data[assessmentresults.ColumnKeyStatusChange]) // Should be ID-2
+			}
+		}
 
 		require.Equal(t, 2, len(observationsRows))
-		assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, observationsRows[0].Data[assessmentresults.ColumnKeyStatusChange]) // Linked to ID-1
-		assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, observationsRows[1].Data[assessmentresults.ColumnKeyStatusChange]) // Linked to ID-2
+		for _, row := range observationsRows {
+			if row.Data[assessmentresults.ColumnKeyControlIds] == "ID-1" {
+				assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, row.Data[assessmentresults.ColumnKeyStatusChange])
+			} else {
+				assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, row.Data[assessmentresults.ColumnKeyStatusChange]) // Linked to ID-2
+			}
+		}
 	})
 
 	t.Run("Removed Finding", func(t *testing.T) {
@@ -55,12 +66,23 @@ func TestGetResultsComparison(t *testing.T) {
 		// Finding is removed, check both rows have the right status change
 		findingsRows, observationsRows := assessmentresults.GetResultComparison(results[0], results[1])
 		require.Equal(t, 2, len(findingsRows))
-		assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, findingsRows[0].Data[assessmentresults.ColumnKeyStatusChange]) // Should be ID-1
-		assert.Equal(t, result.REMOVED, findingsRows[1].Data[assessmentresults.ColumnKeyStatusChange])                    // Should be ID-2, removed
+		for _, row := range findingsRows {
+			if row.Data[assessmentresults.ColumnKeyName] == "ID-1" {
+				assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, row.Data[assessmentresults.ColumnKeyStatusChange])
+			} else {
+				assert.Equal(t, result.REMOVED, row.Data[assessmentresults.ColumnKeyStatusChange]) // Should be ID-2, removed
+			}
+		}
 
+		// Observation is removed, check both rows have the right status change
 		require.Equal(t, 2, len(observationsRows))
-		assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, observationsRows[0].Data[assessmentresults.ColumnKeyStatusChange]) // Should be linked to ID-1
-		assert.Equal(t, result.REMOVED, observationsRows[1].Data[assessmentresults.ColumnKeyStatusChange])                    // Should be linked to ID-2, removed
+		for _, row := range observationsRows {
+			if row.Data[assessmentresults.ColumnKeyControlIds] == "ID-1" {
+				assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, row.Data[assessmentresults.ColumnKeyStatusChange])
+			} else {
+				assert.Equal(t, result.REMOVED, row.Data[assessmentresults.ColumnKeyStatusChange]) // Should be linked to ID-2, removed
+			}
+		}
 	})
 
 	t.Run("Added Finding", func(t *testing.T) {
@@ -71,12 +93,22 @@ func TestGetResultsComparison(t *testing.T) {
 		// Finding is added, check both rows have the right status change
 		findingsRows, observationsRows := assessmentresults.GetResultComparison(results[0], results[1])
 		require.Equal(t, 2, len(findingsRows))
-		assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, findingsRows[0].Data[assessmentresults.ColumnKeyStatusChange]) // Should be ID-1
-		assert.Equal(t, result.NEW, findingsRows[1].Data[assessmentresults.ColumnKeyStatusChange])                        // Should be ID-2, added
+		for _, row := range findingsRows {
+			if row.Data[assessmentresults.ColumnKeyName] == "ID-1" {
+				assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, row.Data[assessmentresults.ColumnKeyStatusChange])
+			} else {
+				assert.Equal(t, result.NEW, row.Data[assessmentresults.ColumnKeyStatusChange]) // Should be ID-2, added
+			}
+		}
 
 		require.Equal(t, 2, len(observationsRows))
-		assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, observationsRows[0].Data[assessmentresults.ColumnKeyStatusChange]) // Should be linked to ID-1
-		assert.Equal(t, result.NEW, observationsRows[1].Data[assessmentresults.ColumnKeyStatusChange])                        // Should be linked to ID-2, added
+		for _, row := range observationsRows {
+			if row.Data[assessmentresults.ColumnKeyControlIds] == "ID-1" {
+				assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, row.Data[assessmentresults.ColumnKeyStatusChange])
+			} else {
+				assert.Equal(t, result.NEW, row.Data[assessmentresults.ColumnKeyStatusChange]) // Should be linked to ID-2, added
+			}
+		}
 	})
 
 	t.Run("Removed Observation", func(t *testing.T) {
@@ -90,8 +122,13 @@ func TestGetResultsComparison(t *testing.T) {
 		assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, findingsRows[0].Data[assessmentresults.ColumnKeyStatusChange]) // Should be ID-1
 
 		require.Equal(t, 2, len(observationsRows))
-		assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, observationsRows[0].Data[assessmentresults.ColumnKeyStatusChange]) // Should be linked to ID-1
-		assert.Equal(t, result.REMOVED, observationsRows[1].Data[assessmentresults.ColumnKeyStatusChange])                    // Should be linked to ID-1, removed
+		for _, row := range observationsRows {
+			if row.Data[assessmentresults.ColumnKeyValidationId] == "88AB3470-B96B-4D7C-BC36-02BF9563C46C" {
+				assert.Equal(t, result.SATISFIED_TO_NOT_SATISFIED, row.Data[assessmentresults.ColumnKeyStatusChange])
+			} else {
+				assert.Equal(t, result.REMOVED, row.Data[assessmentresults.ColumnKeyStatusChange]) // Should be linked to ID-1, removed
+			}
+		}
 	})
 
 }

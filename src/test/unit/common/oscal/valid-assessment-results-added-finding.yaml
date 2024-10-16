@@ -38,7 +38,7 @@ assessment-results:
       observations:
         - collected: 2024-10-15T10:56:06.553304-04:00
           description: |
-            [TEST]: 88AB3470-B96B-4D7C-BC36-02BF9563C46C - lula-validation
+            [TEST]: 88AB3470-B96B-4D7C-BC36-02BF9563C46C - lula-validation-1
           methods:
             - TEST
           relevant-evidence:
@@ -47,7 +47,7 @@ assessment-results:
           uuid: 92cb3cad-bbcd-431a-aaa9-cd47275a3982
         - collected: 2024-10-15T10:56:06.559086-04:00
           description: |
-            [TEST]: 01e21994-2cfc-45fb-ac84-d00f2e5912b0 - lula-validation
+            [TEST]: 01e21994-2cfc-45fb-ac84-d00f2e5912b0 - lula-validation-2
           methods:
             - TEST
           relevant-evidence:
@@ -89,7 +89,7 @@ assessment-results:
       observations:
         - collected: 2024-10-15T10:55:51.725223-04:00
           description: |
-            [TEST]: 88AB3470-B96B-4D7C-BC36-02BF9563C46C - lula-validation
+            [TEST]: 88AB3470-B96B-4D7C-BC36-02BF9563C46C - lula-validation-1
           methods:
             - TEST
           relevant-evidence:

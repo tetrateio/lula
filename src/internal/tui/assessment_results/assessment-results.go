@@ -176,20 +176,22 @@ func GetResultComparison(selectedResult, comparedResult result) ([]table.Row, []
 		resultComparison := pkgResult.NewResultComparisonMap(*selectedResult.OscalResult, *comparedResult.OscalResult)
 		for k, v := range resultComparison {
 			// Make compared finding row
-			comparedFindingString, err := common.ToYamlString(v.ComparedFinding)
-			if err != nil {
-				common.PrintToLog("error converting finding to yaml: %v", err)
-				comparedFindingString = ""
-			}
 			var comparedFindingRow table.Row
 			var ok bool
 			if comparedFindingRow, ok = selectedResult.FindingsMap[k]; ok {
-				comparedFindingRow.Data[ColumnKeyComparedFinding] = comparedFindingString
 				comparedFindingRow.Data[ColumnKeyStatusChange] = v.StateChange
+				if r, ok := comparedResult.FindingsMap[k]; ok {
+					// Finding exists in both results
+					comparedFindingRow.Data[ColumnKeyComparedFinding] = r.Data[ColumnKeyFinding]
+				} else {
+					// Finding is new
+					comparedFindingRow.Data[ColumnKeyComparedFinding] = ""
+				}
 			} else {
 				if comparedFindingRow, ok = comparedResult.FindingsMap[k]; ok {
+					// Finding was removed
+					comparedFindingRow.Data[ColumnKeyComparedFinding] = comparedFindingRow.Data[ColumnKeyFinding]
 					comparedFindingRow.Data[ColumnKeyFinding] = ""
-					comparedFindingRow.Data[ColumnKeyComparedFinding] = comparedFindingString
 					comparedFindingRow.Data[ColumnKeyStatusChange] = v.StateChange
 				}
 			}
@@ -214,7 +216,8 @@ func GetResultComparison(selectedResult, comparedResult result) ([]table.Row, []
 							// Observation was removed
 							obsUuid = op.ComparedObservationUuid
 							comparedObservationRow.Data[ColumnKeyStatusChange] = op.StateChange
-							comparedObservationRow.Data[ColumnKeyComparedObservation] = ""
+							comparedObservationRow.Data[ColumnKeyComparedObservation] = comparedObservationRow.Data[ColumnKeyObservation]
+							comparedObservationRow.Data[ColumnKeyObservation] = ""
 						}
 					}
 					// Check if observation has already been added
