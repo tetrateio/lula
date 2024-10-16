@@ -126,22 +126,21 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
+	if m.open {
+		// up front so it doesn't capture the first key ('e')
+		if m.remarksEditor.Focused() {
+			m.remarksEditor, cmd = m.remarksEditor.Update(msg)
+			cmds = append(cmds, cmd)
+		} else if m.descriptionEditor.Focused() {
+			m.descriptionEditor, cmd = m.descriptionEditor.Update(msg)
+			cmds = append(cmds, cmd)
+		}
 
-	// up front so it doesn't capture the first key ('e')
-	if m.remarksEditor.Focused() {
-		m.remarksEditor, cmd = m.remarksEditor.Update(msg)
-		cmds = append(cmds, cmd)
-	} else if m.descriptionEditor.Focused() {
-		m.descriptionEditor, cmd = m.descriptionEditor.Update(msg)
-		cmds = append(cmds, cmd)
-	}
+		switch msg := msg.(type) {
+		case tea.WindowSizeMsg:
+			m.updateSizing(msg.Height-common.TabOffset, msg.Width)
 
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.updateSizing(msg.Height-common.TabOffset, msg.Width)
-
-	case tea.KeyMsg:
-		if m.open {
+		case tea.KeyMsg:
 			k := msg.String()
 			switch k {
 			case common.ContainsKey(k, m.keys.Help.Keys()):
@@ -276,48 +275,48 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.updateKeyBindings()
 			}
-		}
 
-	case common.PickerItemSelected:
-		// reset all the controls, contents - if component is selected, reset the framework list as well
-		if msg.From == componentPickerKind {
-			m.selectedComponent = m.components[msg.Selected]
-			m.selectedFramework = framework{}
+		case common.PickerItemSelected:
+			// reset all the controls, contents - if component is selected, reset the framework list as well
+			if msg.From == componentPickerKind {
+				m.selectedComponent = m.components[msg.Selected]
+				m.selectedFramework = framework{}
 
-			// Update controls list
-			if len(m.components[msg.Selected].Frameworks) > 0 {
-				m.selectedFramework = m.components[msg.Selected].Frameworks[0]
+				// Update controls list
+				if len(m.components[msg.Selected].Frameworks) > 0 {
+					m.selectedFramework = m.components[msg.Selected].Frameworks[0]
+				}
+			} else if msg.From == frameworkPickerKind {
+				m.selectedFramework = m.selectedComponent.Frameworks[msg.Selected]
 			}
-		} else if msg.From == frameworkPickerKind {
-			m.selectedFramework = m.selectedComponent.Frameworks[msg.Selected]
+
+			m.resetWidgets()
 		}
 
-		m.resetWidgets()
+		mdl, cmd := m.componentPicker.Update(msg)
+		m.componentPicker = mdl.(common.PickerModel)
+		cmds = append(cmds, cmd)
+
+		mdl, cmd = m.frameworkPicker.Update(msg)
+		m.frameworkPicker = mdl.(common.PickerModel)
+		cmds = append(cmds, cmd)
+
+		mdl, cmd = m.detailView.Update(msg)
+		m.detailView = mdl.(common.DetailModel)
+		cmds = append(cmds, cmd)
+
+		m.remarks, cmd = m.remarks.Update(msg)
+		cmds = append(cmds, cmd)
+
+		m.description, cmd = m.description.Update(msg)
+		cmds = append(cmds, cmd)
+
+		m.controls, cmd = m.controls.Update(msg)
+		cmds = append(cmds, cmd)
+
+		m.validations, cmd = m.validations.Update(msg)
+		cmds = append(cmds, cmd)
 	}
-
-	mdl, cmd := m.componentPicker.Update(msg)
-	m.componentPicker = mdl.(common.PickerModel)
-	cmds = append(cmds, cmd)
-
-	mdl, cmd = m.frameworkPicker.Update(msg)
-	m.frameworkPicker = mdl.(common.PickerModel)
-	cmds = append(cmds, cmd)
-
-	mdl, cmd = m.detailView.Update(msg)
-	m.detailView = mdl.(common.DetailModel)
-	cmds = append(cmds, cmd)
-
-	m.remarks, cmd = m.remarks.Update(msg)
-	cmds = append(cmds, cmd)
-
-	m.description, cmd = m.description.Update(msg)
-	cmds = append(cmds, cmd)
-
-	m.controls, cmd = m.controls.Update(msg)
-	cmds = append(cmds, cmd)
-
-	m.validations, cmd = m.validations.Update(msg)
-	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
 }
@@ -332,7 +331,10 @@ func (m Model) View() string {
 	if m.detailView.Open {
 		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, m.detailView.View(), lipgloss.WithWhitespaceChars(" "))
 	}
-	return m.mainView()
+	if m.open {
+		return m.mainView()
+	}
+	return ""
 }
 
 func (m Model) mainView() string {

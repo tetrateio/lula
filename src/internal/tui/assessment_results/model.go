@@ -29,6 +29,7 @@ const (
 	ColumnKeyStatusChange                          = "status_change"
 	ColumnKeyFinding                               = "finding"
 	ColumnKeyRelatedObs                            = "related_obs"
+	ColumnKeyControlIds                            = "control_ids"
 	ColumnKeyComparedFinding                       = "compared_finding"
 	ColumnKeyObservation                           = "observation"
 	ColumnKeyComparedObservation                   = "compared_observation"
@@ -89,15 +90,14 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
 	var cmds []tea.Cmd
+	if m.open {
+		switch msg := msg.(type) {
+		case tea.WindowSizeMsg:
+			m.updateSizing(msg.Height-common.TabOffset, msg.Width)
 
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.updateSizing(msg.Height-common.TabOffset, msg.Width)
+		case tea.KeyMsg:
 
-	case tea.KeyMsg:
-		if m.open {
 			common.DumpToLog(msg)
 			k := msg.String()
 			switch k {
@@ -161,7 +161,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				switch m.focus {
 				case focusFindings:
 					if m.findingsTable.HighlightedRow().Data != nil {
-						m.findingsTable.WithKeyMap(common.UnfocusedTableKeyMap())
+						m.findingsTable = m.findingsTable.WithKeyMap(common.UnfocusedTableKeyMap())
 						return m, func() tea.Msg {
 							return common.DetailOpenMsg{
 								Content:      m.getFindingsDetail(),
@@ -173,7 +173,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				case focusObservations:
 					if m.observationsTable.HighlightedRow().Data != nil {
-						m.observationsTable.WithKeyMap(common.UnfocusedTableKeyMap())
+						m.observationsTable = m.observationsTable.WithKeyMap(common.UnfocusedTableKeyMap())
 						return m, func() tea.Msg {
 							return common.DetailOpenMsg{
 								Content:      m.getObsDetail(),
@@ -193,10 +193,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.keys = assessmentKeysInFilter
 				}
 			}
-		}
 
-	case common.PickerItemSelected:
-		if m.open {
+		case common.PickerItemSelected:
 			if msg.From == resultPicker {
 				m.selectedResultIndex = msg.Selected
 				m.selectedResult = m.results[m.selectedResultIndex]
@@ -206,8 +204,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.comparedResult = result{}
 				m.comparedResultsPicker.UpdateItems(getComparedResults(m.results, m.selectedResult))
 			} else if msg.From == comparedResultPicker {
-				// First item will always be "None", so do nothing if selected
-				if msg.Selected != 0 {
+				// First item will always be "None", so return single table if selected
+				if msg.Selected == 0 {
+					if m.comparedResult.OscalResult != nil {
+						m.findingsTable, m.observationsTable = getSingleResultTables(m.selectedResult.FindingsRows, m.selectedResult.ObservationsRows)
+						m.currentObservations = m.selectedResult.ObservationsRows
+						m.comparedResult = result{}
+					}
+				} else {
 					if m.selectedResultIndex < msg.Selected {
 						m.comparedResult = m.results[msg.Selected]
 					} else {
@@ -217,25 +221,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+
+		mdl, cmd := m.resultsPicker.Update(msg)
+		m.resultsPicker = mdl.(common.PickerModel)
+		cmds = append(cmds, cmd)
+
+		mdl, cmd = m.comparedResultsPicker.Update(msg)
+		m.comparedResultsPicker = mdl.(common.PickerModel)
+		cmds = append(cmds, cmd)
+
+		mdl, cmd = m.detailView.Update(msg)
+		m.detailView = mdl.(common.DetailModel)
+		cmds = append(cmds, cmd)
+
+		m.findingsTable, cmd = m.findingsTable.Update(msg)
+		cmds = append(cmds, cmd)
+
+		m.observationsTable, cmd = m.observationsTable.Update(msg)
+		cmds = append(cmds, cmd)
 	}
-
-	mdl, cmd := m.resultsPicker.Update(msg)
-	m.resultsPicker = mdl.(common.PickerModel)
-	cmds = append(cmds, cmd)
-
-	mdl, cmd = m.comparedResultsPicker.Update(msg)
-	m.comparedResultsPicker = mdl.(common.PickerModel)
-	cmds = append(cmds, cmd)
-
-	mdl, cmd = m.detailView.Update(msg)
-	m.detailView = mdl.(common.DetailModel)
-	cmds = append(cmds, cmd)
-
-	m.findingsTable, cmd = m.findingsTable.Update(msg)
-	cmds = append(cmds, cmd)
-
-	m.observationsTable, cmd = m.observationsTable.Update(msg)
-	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
 }
@@ -250,7 +254,10 @@ func (m Model) View() string {
 	if m.detailView.Open {
 		return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, m.detailView.View(), lipgloss.WithWhitespaceChars(" "))
 	}
-	return m.mainView()
+	if m.open {
+		return m.mainView()
+	}
+	return ""
 }
 
 func (m Model) mainView() string {
@@ -376,6 +383,7 @@ func (m *Model) UpdateWithAssessmentResults(assessmentResults *oscalTypes_1_1_2.
 	m.comparedResultsPicker.UpdateItems(getComparedResults(results, selectedResult))
 
 	m.findingsTable, m.observationsTable = getSingleResultTables(selectedResult.FindingsRows, selectedResult.ObservationsRows)
+	m.currentObservations = selectedResult.ObservationsRows
 }
 
 func (m *Model) updateSizing(height, width int) {
@@ -425,6 +433,7 @@ func getSingleResultTables(findingsRows, observationsRows []table.Row) (findings
 	observationsTableColumns := []table.Column{
 		table.NewFlexColumn(ColumnKeyName, "Observation", 1).WithFiltered(true),
 		table.NewFlexColumn(ColumnKeyStatus, "Status", 1),
+		table.NewFlexColumn(ColumnKeyControlIds, "Controls", 1),
 		table.NewFlexColumn(ColumnKeyDescription, "Remarks", 4),
 	}
 
@@ -458,6 +467,7 @@ func getComparedResultTables(selectedResult, comparedResult result) (findingsTab
 		table.NewFlexColumn(ColumnKeyName, "Observation", 1).WithFiltered(true),
 		table.NewFlexColumn(ColumnKeyStatus, "Status", 1),
 		table.NewFlexColumn(ColumnKeyStatusChange, "Status Change", 1).WithFiltered(true),
+		table.NewFlexColumn(ColumnKeyControlIds, "Controls", 1).WithFiltered(true),
 		table.NewFlexColumn(ColumnKeyDescription, "Remarks", 4),
 	}
 
@@ -497,6 +507,7 @@ func (m *Model) getObsDetail() string {
 	important := lipgloss.NewStyle().Bold(true).
 		Foreground(common.Special)
 
+	text.WriteString(fmt.Sprintf("Control IDs: %s\n\n", m.observationsTable.HighlightedRow().Data[ColumnKeyControlIds].(string)))
 	text.WriteString(fmt.Sprintf("%s\n\n", important.Render("Observation: "+m.observationsTable.HighlightedRow().Data[ColumnKeyName].(string))))
 	text.WriteString(m.observationsTable.HighlightedRow().Data[ColumnKeyObservation].(string))
 

@@ -55,6 +55,7 @@ func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result 
 			observationsRows := make([]table.Row, 0)
 			observationsMap := make(map[string]table.Row)
 			findingsMap := make(map[string]table.Row)
+			observationsControlMap := make(map[string][]string, 0)
 
 			for _, f := range *r.Findings {
 				findingString, err := common.ToYamlString(f)
@@ -66,6 +67,11 @@ func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result 
 				if f.RelatedObservations != nil {
 					for _, o := range *f.RelatedObservations {
 						relatedObs = append(relatedObs, o.ObservationUuid)
+						if _, ok := observationsControlMap[o.ObservationUuid]; !ok {
+							observationsControlMap[o.ObservationUuid] = []string{f.Target.TargetId}
+						} else {
+							observationsControlMap[o.ObservationUuid] = append(observationsControlMap[o.ObservationUuid], f.Target.TargetId)
+						}
 					}
 				}
 				if f.Target.Status.State == "satisfied" {
@@ -88,6 +94,7 @@ func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result 
 				findingsRows = append(findingsRows, findingRow)
 				findingsMap[f.Target.TargetId] = findingRow
 			}
+
 			for _, o := range *r.Observations {
 				state := "undefined"
 				var remarks strings.Builder
@@ -117,9 +124,16 @@ func GetResults(assessmentResults *oscalTypes_1_1_2.AssessmentResults) []result 
 					common.PrintToLog("error converting observation to yaml: %v", err)
 					obsString = ""
 				}
+
+				var controlIds []string
+				if ids, ok := observationsControlMap[o.UUID]; ok {
+					controlIds = ids
+				}
+
 				obsRow := table.NewRow(table.RowData{
 					ColumnKeyName:        GetReadableObservationName(o.Description),
 					ColumnKeyStatus:      table.NewStyledCell(state, style),
+					ColumnKeyControlIds:  strings.Join(controlIds, ", "),
 					ColumnKeyDescription: remarks.String(),
 					// Hidden columns
 					ColumnKeyObservation:  obsString,
