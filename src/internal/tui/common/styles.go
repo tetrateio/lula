@@ -7,20 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const (
-	// In real life situations we'd adjust the document to fit the width we've
-	// detected. In the case of this example we're hardcoding the width, and
-	// later using the detected width only to truncate in order to avoid jaggy
-	// wrapping.
-	width = 96
-
-	columnWidth = 30
-
-	modalWidth  = 60
-	modalHeight = 7
-)
-
-// Style definitions.
+// Common Style definitions.
 var (
 
 	// Colors
