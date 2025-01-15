@@ -15,7 +15,7 @@ func TestExecuteTpl(t *testing.T) {
 		expectErr bool
 	}{
 		"basic success": {
-			tplStr: `hello, [[.login.username]]!`,
+			tplStr: "hello, [[.login.username]]!",
 			vars: map[string]map[string]interface{}{
 				"login": {
 					"username": "cheetarah",
@@ -25,7 +25,7 @@ func TestExecuteTpl(t *testing.T) {
 			expectErr: false,
 		},
 		"success": {
-			tplStr: `hello, [[ (index .login.usernames 0) ]]!`,
+			tplStr: "hello, [[ (index .login.usernames 0) ]]!",
 			vars: map[string]map[string]interface{}{
 				"login": {
 					"usernames": []string{"batcat", "cheetarah"},
@@ -36,7 +36,7 @@ func TestExecuteTpl(t *testing.T) {
 		},
 		//TODO: we should catch this at an earlier stage (validation schema)
 		"invalid tplStr, not an error": {
-			tplStr: `hello, {{.login.username]]!`,
+			tplStr: "hello, {{.login.username]]!",
 			vars: map[string]map[string]interface{}{
 				"login": {
 					"username": "cheetarah",
@@ -64,13 +64,13 @@ func TestExecuteTpl(t *testing.T) {
 func TestExecuteTpls(t *testing.T) {
 	input := Request{
 		ParamsTpl: map[string]string{
-			"param1": `[[.input.value1]]`,
-			"param2": `[[.input.value2]]`,
+			"param1": "[[.input.value1]]",
+			"param2": "[[.input.value2]]",
 		},
 		URLTpl: `http:example.com/[[.admin.realm]]/foo`,
 		Options: &ApiOpts{
 			HeadersTpl: map[string]string{
-				"token": `[[.auth.token]]`,
+				"token": "[[.auth.token]]",
 			},
 		},
 	}

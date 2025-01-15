@@ -13,6 +13,7 @@ import (
 
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 
+	"github.com/defenseunicorns/lula/src/pkg/message"
 	"github.com/defenseunicorns/lula/src/types"
 )
 
@@ -87,6 +88,10 @@ func (a ApiDomain) makeRequests(ctx context.Context) (types.DomainResources, err
 				}
 
 				if request.Outputs != nil {
+					if a.Spec.outputs == nil {
+						a.Spec.outputs = make(map[string]map[string]interface{})
+					}
+					message.Debug("processing outputs")
 					node, err := yaml.ConvertJSONToYamlNode(string(response.Raw))
 					if err != nil {
 						errs = errors.Join(errs, err)
@@ -97,6 +102,7 @@ func (a ApiDomain) makeRequests(ctx context.Context) (types.DomainResources, err
 						if err != nil {
 							errs = errors.Join(errs, err)
 						}
+						a.Spec.outputs[request.Name] = make(map[string]interface{})
 						a.Spec.outputs[request.Name][output.Name] = v
 					}
 				}
@@ -129,8 +135,10 @@ func executeTpls(req Request, vars map[string]map[string]interface{}) (Request, 
 
 	// headers
 	if req.Options.HeadersTpl != nil {
+		message.Debug("overriding headers")
 		headers := make(map[string]string)
 		for k, v := range req.Options.HeadersTpl {
+			message.Debug("executing tpl %v with vars %v", v, vars)
 			h, err := executeTpl(v, vars)
 			if err != nil {
 				return modifiedReq, err

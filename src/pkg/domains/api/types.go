@@ -61,7 +61,7 @@ type Request struct {
 	Method     string            `json:"method,omitempty" yaml:"method,omitempty"`
 	Body       string            `json:"body,omitempty" yaml:"body,omitempty"`
 	Executable bool              `json:"executable,omitempty" yaml:"executable,omitempty"`
-	Outputs    []*Output         `json:"output,omitempty" yaml:"output,omitempty"`
+	Outputs    []*Output         `json:"outputs,omitempty" yaml:"outputs,omitempty"`
 	// ApiOpts specific to this request. If ApiOpts is present, values in the
 	// ApiSpec-level Options are ignored for this request.
 	Options *ApiOpts `json:"options,omitempty" yaml:"options,omitempty"`
@@ -130,8 +130,8 @@ type ApiOpts struct {
 	Headers map[string]string `json:"headers,omitempty" yaml:"headers,omitempty"`
 
 	// POC: user-input template strings to process like go templates
-	// TODO: ensure that top-level options cannot have HeaderTpl, only request-level options
-	HeadersTpl map[string]string `json:"header_tpl" yaml:"url_tpl"`
+	// TODO: ensure that top-level options cannot have HeadersTpl, only request-level options
+	HeadersTpl map[string]string `json:"headerstpl,omitempty" yaml:"headerstpl,omitempty"`
 
 	// internally-managed options
 	timeout  *time.Duration
