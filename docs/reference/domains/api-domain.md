@@ -122,5 +122,5 @@ requests:
     options:
       headerstpl:
         # syntax is requestname.outputname
-        authorization: `Bearer [[.keycloak-token.token]]`
+        authorization: "Bearer [[.keycloak-token.token]]"
 ```
