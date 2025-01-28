@@ -626,3 +626,26 @@ func TestHandleExistingComponent(t *testing.T) {
 		require.Equal(t, 2, len(*component.Model.Components))
 	})
 }
+
+func TestRewritePaths(t *testing.T) {
+	// Get test data
+	componentBytes := loadTestData(t, "../../../test/unit/common/oscal/component-testrewritepaths.yaml")
+	expectedComponentBytes := loadTestData(t, "../../../test/unit/common/oscal/component-testrewritepaths-expected.yaml")
+
+	var expectedComponent oscalTypes.OscalCompleteSchema
+	err := yaml.Unmarshal(expectedComponentBytes, &expectedComponent)
+	require.NoError(t, err)
+
+	var component oscal.ComponentDefinition
+	err = component.NewModel(componentBytes)
+	require.NoError(t, err)
+
+	// Simulate moving the the component definition from "/app" -> "/newapp"
+	// This should imply all paths in the component definition should be rewritten to be relative to "/newapp"
+	// since this operation assumes the referenced files are NOT relocated
+	err = component.RewritePaths("/app", "/newapp")
+	require.NoError(t, err)
+
+	// Compare the expected and actual component definitions
+	require.Equal(t, expectedComponent, *component.GetCompleteModel())
+}
