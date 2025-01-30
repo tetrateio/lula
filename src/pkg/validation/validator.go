@@ -14,7 +14,8 @@ type Validator struct {
 	consumer ResultConsumer
 
 	// Contains the validations and requirements
-	store *ValidationStore
+	validationStore  *ValidationStore
+	requirementStore *RequirementStore
 
 	// Variables to store validator configuration behaviors
 	outputDir                    string
@@ -35,11 +36,12 @@ func New(producer ValidationProducer, consumer ResultConsumer, opts ...Option) (
 		}
 	}
 
-	validator.store = NewValidationStore()
+	validator.validationStore = NewValidationStore()
+	validator.requirementStore = NewRequirementStore()
 	validator.producer = producer
 	validator.consumer = consumer
 
-	err := validator.producer.Populate(validator.store)
+	err := validator.producer.Populate(validator.validationStore, validator.requirementStore)
 	if err != nil {
 		return nil, err
 	}
@@ -50,13 +52,13 @@ func New(producer ValidationProducer, consumer ResultConsumer, opts ...Option) (
 // ExecuteValidations collects the validations, executes, and provides the results in the specified consumer
 func (v *Validator) ExecuteValidations(ctx context.Context, runExecutableValidations bool) error {
 	// Run the validations
-	err := v.store.RunValidations(ctx, runExecutableValidations, v.strict)
+	err := v.validationStore.RunValidations(ctx, runExecutableValidations, v.strict)
 	if err != nil {
 		return err
 	}
 
 	// Consumer evaluates the results -> this should execute their custom output routines
-	err = v.consumer.EvaluateResults(v.store)
+	err = v.consumer.GenerateResults(v.requirementStore)
 	if err != nil {
 		return err
 	}
@@ -65,13 +67,8 @@ func (v *Validator) ExecuteValidations(ctx context.Context, runExecutableValidat
 }
 
 func (v *Validator) GetStats() (int, int, int) {
-	executableValidations := v.store.GetExecutable()
-	return v.store.CountRequirements(),
-		v.store.CountValidations(),
+	executableValidations := v.validationStore.GetExecutable()
+	return v.requirementStore.Count(),
+		v.validationStore.Count(),
 		len(executableValidations)
-}
-
-func (v *Validator) YieldResults() error {
-	// Execute the consumer GenerateOutput function
-	return v.consumer.GenerateOutput()
 }

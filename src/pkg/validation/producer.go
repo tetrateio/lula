@@ -9,8 +9,8 @@ import (
 // A Validation Producer interface defines the requirements, how to meet them, and associated validations
 type ValidationProducer interface {
 	// Populate populates the validation store with the validations from the producer
-	// as the requirements defined by the producer
-	Populate(store *ValidationStore) error
+	// and the defined requirements
+	Populate(validationStore *ValidationStore, requirementStore *RequirementStore) error
 }
 
 // ComponentDefinitionProducer is a producer of validations referenced via OSCAL component definition
@@ -31,12 +31,12 @@ func NewComponentProducer(compdef *oscal.ComponentDefinition, path, target strin
 	}
 }
 
-func (c *ComponentDefinitionProducer) Populate(store *ValidationStore) error {
-	// TODO: Get all validations from component definition
+func (c *ComponentDefinitionProducer) Populate(validationStore *ValidationStore, requirementStore *RequirementStore) error {
+	// TODO: Get all requirements and associated validations from component definition
 
-	// These could be stored in the backmatter or in a separate file
+	// These could be stored in the backmatter or in separate file given by the "links"
 
-	// Get all requirements <> validations -> populate c.requirements
+	// Get all requirements <> validations -> populate validationStore and requirementStore
 
 	return nil
 }
@@ -52,14 +52,14 @@ func NewSimpleProducer(validations []common.Validation) *SimpleProducer {
 	}
 }
 
-func (p *SimpleProducer) Populate(store *ValidationStore) error {
+func (p *SimpleProducer) Populate(validationStore *ValidationStore, requirementStore *RequirementStore) error {
 	lulaValidations := make([]*types.LulaValidation, 0, len(p.validations))
 	for _, validation := range p.validations {
-		id, err := store.AddValidation(&validation)
+		id, err := validationStore.AddValidation(&validation)
 		if err != nil {
 			return err
 		}
-		lulaValidation, err := store.GetLulaValidation(id)
+		lulaValidation, err := validationStore.GetLulaValidation(id)
 		if err != nil {
 			return err
 		}
@@ -67,7 +67,7 @@ func (p *SimpleProducer) Populate(store *ValidationStore) error {
 	}
 	simpleReqt := NewSimpleRequirement(lulaValidations, "simple")
 
-	store.AddRequirement(simpleReqt)
+	requirementStore.AddRequirement(simpleReqt)
 
 	return nil
 }

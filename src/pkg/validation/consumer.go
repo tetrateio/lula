@@ -9,18 +9,12 @@ import (
 	"github.com/defenseunicorns/lula/src/pkg/message"
 )
 
-// ResultConsumer is the interface that must be implemented by any consumer of the validation
-// store and results. It is responsible for evaluating the results and generating the output
-// speific to the consumer.
+// ResultConsumer is the interface that must be implemented by any consumer of the requirements
+// It is responsible for evaluating the results and generating the output speific to the consumer.
 type ResultConsumer interface {
-	// Evaluate Results are the custom implementation for the consumer, which should take the
-	// requirements, as specified by the producer, plus the data in the validation store
-	// and evaluate them + generate the output
-	EvaluateResults(store *ValidationStore) error
-
-	// Generate Output is the custom implementation for the consumer that should create
-	// a custom output
-	GenerateOutput() error
+	// The GenerateResults method should take the requirements, as specified by the producer,
+	// and generate the results in the consumer-specific custom format
+	GenerateResults(store *RequirementStore) error
 }
 
 // AssessmentResultsConsumer is an implementation of the ResultConsumer interface
@@ -52,7 +46,7 @@ func NewAssessmentResultsConsumer(path string) *AssessmentResultsConsumer {
 	}
 }
 
-func (c *AssessmentResultsConsumer) EvaluateResults(store *ValidationStore) error {
+func (c *AssessmentResultsConsumer) GenerateResults(store *RequirementStore) error {
 	// Update the oscal.AssessmentResults with the results from the store
 	// each requirement should be a finding
 	// each validation in the requirement should be an observation
@@ -62,15 +56,6 @@ func (c *AssessmentResultsConsumer) EvaluateResults(store *ValidationStore) erro
 	// If the existing assessment results are nil (c.assessmentResults == nil), set them
 
 	// If they are populated, merge the results from the store into the existing assessment results
-
-	return nil
-}
-
-func (c *AssessmentResultsConsumer) GenerateOutput() error {
-	// Maybe should this consumer just create the results and then run a generate function
-	// to create the assessment results model? I feel like if this is from an assessment plan
-	// vs. a component definition, the assesment results model will be different... could/should
-	// this be handled prior to the consumer being created?
 
 	return oscal.WriteOscalModelNew(c.path, c.assessmentResults)
 }
@@ -89,7 +74,7 @@ func NewSimpleConsumer() *SimpleConsumer {
 	}
 }
 
-func (c *SimpleConsumer) EvaluateResults(store *ValidationStore) error {
+func (c *SimpleConsumer) GenerateResults(store *RequirementStore) error {
 	var output strings.Builder
 	requirements := store.GetRequirements()
 	passCount := 0
@@ -101,7 +86,7 @@ func (c *SimpleConsumer) EvaluateResults(store *ValidationStore) error {
 		}
 
 		pass, msg := requirement.EvaluateSuccess()
-		if !pass {
+		if pass {
 			passCount++
 		}
 		output.WriteString(msg)
@@ -114,10 +99,14 @@ func (c *SimpleConsumer) EvaluateResults(store *ValidationStore) error {
 
 	c.msg = output.String()
 
+	// Could have some additional logic inside SimpleConsumer to determine if output should be printed
+	// to stdout, or some external file, etc.
+	c.WriteOutput()
+
 	return nil
 }
 
-func (c *SimpleConsumer) GenerateOutput() error {
+func (c *SimpleConsumer) WriteOutput() error {
 	if !c.pass {
 		return fmt.Errorf("requirements failed: %s", c.msg)
 	}

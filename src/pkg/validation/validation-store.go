@@ -11,16 +11,14 @@ import (
 	"github.com/defenseunicorns/lula/src/types"
 )
 
-// Contains the store for the validations (their results, once executed) and associated requirements
+// Contains the store for the validations and their results, once executed
 type ValidationStore struct {
 	validationMap map[string]*types.LulaValidation
-	requirements  []Requirement
 }
 
 func NewValidationStore() *ValidationStore {
 	return &ValidationStore{
 		validationMap: make(map[string]*types.LulaValidation),
-		requirements:  make([]Requirement, 0),
 	}
 }
 
@@ -58,27 +56,10 @@ func (v *ValidationStore) GetLulaValidation(id string) (validation *types.LulaVa
 	return validation, fmt.Errorf("validation #%s not found", id)
 }
 
-// AddRequirement adds a requirement to the store
-func (v *ValidationStore) AddRequirement(requirement Requirement) {
-	v.requirements = append(v.requirements, requirement)
-}
-
-// GetRequirements returns the requirements in the store
-func (v *ValidationStore) GetRequirements() []Requirement {
-	return v.requirements
-}
-
 // Count returns the number of validations in the store
-func (v *ValidationStore) CountValidations() int {
+func (v *ValidationStore) Count() int {
 	return len(v.validationMap)
 }
-
-// Count returns the number of requirements in the store
-func (v *ValidationStore) CountRequirements() int {
-	return len(v.requirements)
-}
-
-// Count requirements and associated validations?
 
 func (v *ValidationStore) GetExecutable() []string {
 	executableValidations := make([]string, 0)
