@@ -30,7 +30,7 @@ func NewAssessmentResultsConsumer(path string) *AssessmentResultsConsumer {
 	if err != nil {
 		return nil
 	}
-	ar := oscal.NewAssessmentResults2()
+	ar := oscal.NewAssessmentResults()
 
 	// Update the assessment results model if data is not nil
 	if len(data) != 0 {

@@ -23,7 +23,6 @@ type Validator struct {
 	runExecutableValidations     bool
 	saveResources                bool
 	strict                       bool
-	silent                       bool
 }
 
 // Create a new validator
