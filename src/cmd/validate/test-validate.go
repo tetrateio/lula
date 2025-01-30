@@ -86,12 +86,7 @@ func TestValidateCommand() *cobra.Command {
 			// TODO: Request confirmation for execution, if needed
 			runExecutableValidations := true
 
-			err = validator.ExecuteValidations(cmd.Context(), runExecutableValidations)
-			if err != nil {
-				return err
-			}
-
-			return validator.YieldResults()
+			return validator.ExecuteValidations(cmd.Context(), runExecutableValidations)
 		},
 	}
 

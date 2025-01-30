@@ -113,3 +113,44 @@ func (c *SimpleConsumer) WriteOutput() error {
 	message.Infof("Requirements passed")
 	return nil
 }
+
+// // Sample extension of the Consumer interface to provide logic to a k8s controller
+// // KubernetesValidationController watches ConfigRequirement resources
+// type KubernetesValidationController struct {
+// 	client client.Client
+// }
+
+// var _ ResultConsumer = &KubernetesValidationController{}
+
+// // GenerateResults updates the Kubernetes resource status with validation results
+// // Each CR is a requirement but could do like a whole component definition as a CR?
+// func (c *KubernetesValidationController) GenerateResults(store *RequirementStore) error {
+// 	requirements := store.GetRequirements()
+
+// 	for _, req := range requirements {
+// 		success, message := req.EvaluateSuccess()
+
+// 		// Fetch the corresponding Kubernetes object
+// 		var configReqtCr v1alpha1.ConfigRequirement
+// 		err := c.client.Get(context.TODO(), types.NamespacedName{
+// 			Name:      req.ID(),
+// 			Namespace: "default",
+// 		}, &configReqtCr)
+// 		if err != nil {
+// 			return fmt.Errorf("failed to fetch ConfigRequirement CR %s: %w", req.ID(), err)
+// 		}
+
+// 		// Update the status
+// 		configReqtCr.Status.Success = success
+// 		configReqtCr.Status.Message = message
+
+// 		// Save the updated status
+// 		if err := c.client.Status().Update(context.TODO(), &configReqtCr); err != nil {
+// 			return fmt.Errorf("failed to update ConfigRequirement CR %s: %w", req.ID(), err)
+// 		}
+// 	}
+
+// 	return nil
+// }
+
+// Reconciliation loop just calls validator.ExecuteValidations
