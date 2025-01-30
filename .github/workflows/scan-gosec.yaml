@@ -35,13 +35,13 @@ jobs:
           gosec -stdout -fmt sarif -out results.sarif ./...
       
       - name: Upload artifact
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: SARIF file
           path: results.sarif
           retention-days: 5
 
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@df409f7d9260372bd5f19e5b04e83cb3c43714ae # v3.27.9
+        uses: github/codeql-action/upload-sarif@f6091c0113d1dcf9b98e269ee48e8a7e51b7bdd4 # v3.28.5
         with:
           sarif_file: results.sarif

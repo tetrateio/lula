@@ -2,13 +2,14 @@ package oscal
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"sort"
 	"time"
 
 	"github.com/defenseunicorns/go-oscal/src/pkg/uuid"
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
-	"gopkg.in/yaml.v3"
 
 	"github.com/defenseunicorns/lula/src/config"
 	"github.com/defenseunicorns/lula/src/pkg/common"
@@ -28,26 +29,19 @@ type AssessmentResults struct {
 	Model *oscalTypes.AssessmentResults
 }
 
-func NewAssessmentResults2() *AssessmentResults {
+func NewAssessmentResults() *AssessmentResults {
 	var ar AssessmentResults
 	ar.Model = nil
 	return &ar
 }
 
 func (a *AssessmentResults) NewModel(data []byte) error {
-	var oscalModels oscalTypes.OscalModels
-
-	err := multiModelValidate(data)
+	model, err := NewOscalModel(data)
 	if err != nil {
 		return err
 	}
 
-	err = yaml.Unmarshal(data, &oscalModels)
-	if err != nil {
-		return err
-	}
-
-	a.Model = oscalModels.AssessmentResults
+	a.Model = model.AssessmentResults
 	if a.Model == nil {
 		return fmt.Errorf("unable to find assessment results model")
 	}
@@ -56,7 +50,7 @@ func (a *AssessmentResults) NewModel(data []byte) error {
 }
 
 func (*AssessmentResults) GetType() string {
-	return "assessment-results"
+	return OSCAL_ASSESSMENT_RESULTS
 }
 
 func (a *AssessmentResults) GetCompleteModel() *oscalTypes.OscalModels {
@@ -66,32 +60,39 @@ func (a *AssessmentResults) GetCompleteModel() *oscalTypes.OscalModels {
 }
 
 func (a *AssessmentResults) MakeDeterministic() error {
+	if a.Model == nil {
+		return fmt.Errorf("cannot make nil model deterministic")
+	}
+	MakeAssessmentResultsDeterministic(a.Model)
 	return nil
 }
 
 func (a *AssessmentResults) HandleExisting(path string) error {
+	exists, err := common.CheckFileExists(path)
+	if err != nil {
+		return err
+	}
+	if exists {
+		path = filepath.Clean(path)
+		existingFileBytes, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("error reading file: %v", err)
+		}
+		assessment := NewAssessmentResults()
+		err = assessment.NewModel(existingFileBytes)
+		if err != nil {
+			return err
+		}
+		model, err := MergeAssessmentResults(assessment.Model, a.Model)
+		if err != nil {
+			return err
+		}
+		a.Model = model
+	}
 	return nil
 }
 
-// NewAssessmentResults creates a new assessment results object from the given data.
-func NewAssessmentResults(data []byte) (*oscalTypes.AssessmentResults, error) {
-	var oscalModels oscalTypes.OscalModels
-
-	err := multiModelValidate(data)
-	if err != nil {
-		return nil, err
-	}
-
-	err = yaml.Unmarshal(data, &oscalModels)
-	if err != nil {
-		fmt.Printf("Error marshalling yaml: %s\n", err.Error())
-		return nil, err
-	}
-
-	return oscalModels.AssessmentResults, nil
-}
-
-func GenerateAssessmentResults(results []oscalTypes.Result) (*oscalTypes.AssessmentResults, error) {
+func GenerateAssessmentResults(results []oscalTypes.Result) (*AssessmentResults, error) {
 	var assessmentResults = &oscalTypes.AssessmentResults{}
 
 	// Single time used for all time related fields
@@ -114,7 +115,11 @@ func GenerateAssessmentResults(results []oscalTypes.Result) (*oscalTypes.Assessm
 	// Create results object
 	assessmentResults.Results = results
 
-	return assessmentResults, nil
+	// Create the AssessmentResults
+	var assessment AssessmentResults
+	assessment.Model = assessmentResults
+
+	return &assessment, nil
 }
 
 func MergeAssessmentResults(original *oscalTypes.AssessmentResults, latest *oscalTypes.AssessmentResults) (*oscalTypes.AssessmentResults, error) {
@@ -264,14 +269,14 @@ func MakeAssessmentResultsDeterministic(assessment *oscalTypes.AssessmentResults
 
 // filterResults consumes many assessment-results objects and builds out a map of EvalResults filtered by target
 // this function looks at the target prop as the key in the map
-func FilterResults(resultMap map[string]*oscalTypes.AssessmentResults) map[string]EvalResult {
+func FilterResults(resultMap map[string]*AssessmentResults) map[string]EvalResult {
 	evalResultMap := make(map[string]EvalResult)
 
 	for _, assessment := range resultMap {
-		if assessment == nil {
+		if assessment == nil || assessment.Model == nil {
 			continue
 		}
-		for _, result := range assessment.Results {
+		for _, result := range assessment.Model.Results {
 			if result.Props != nil {
 				var target string
 				hasTarget, targetValue := GetProp("target", LULA_NAMESPACE, result.Props)

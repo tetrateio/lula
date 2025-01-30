@@ -30,7 +30,7 @@ provider:
       msg = check_podinfo_healthy.msg
 
       check_podinfo_healthy = {"result": true, "msg": msg} if {
-        input.podinfoDeployment.status.replicas > 0
+        input.podinfoDeployment.spec.replicas > 0
         input.podinfoDeployment.status.availableReplicas == input.podinfoDeployment.status.replicas
         msg := "Number of replicas > 0 and all replicas are available."
       } else = {"result": false, "msg": msg} if {
