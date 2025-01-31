@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Add triage label
-      uses: actions/github-script@91a83c091797b22c5771b1d7178fd0fddacc73ea
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
       with:
         script: |
           const issueNumber = context.issue.number;
