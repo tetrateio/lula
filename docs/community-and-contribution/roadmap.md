@@ -1,4 +1,9 @@
 # Roadmap
+
+## 2025 Annual
+
+As of 2025, Lula has been placed into maintenance support. The project will not be receiving further active feature development, but will be monitored for issues, critical bug fixes and vulnerabilities. 
+
 ## 2024 Annual
 
 ### Q1 - Foundations & Discovery:
@@ -24,9 +29,3 @@
 * OSCAL Model Coverage: Increase support of processable OSCAL models to include assessment-plan and plan-of-actions-and-milestones (POAM).
 * API Domain: Mature the API Domain into a more extensible option for validations.
 * Data Collection: Increase domain data collection methods by 1 to enable greater compliance mapping capabilities 
-
-## 2025 Annual (WIP)
-
-### Q1 - Benchmarks
-
-* Benchmark: Provide component definition artifacts for various benchmarks/best-practices (CIS etc)
