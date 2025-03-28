@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	"github.com/defenseunicorns/lula/src/pkg/domains/inprocess"
 	goversion "github.com/hashicorp/go-version"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
@@ -155,6 +156,8 @@ func GetDomain(domain *Domain) (types.Domain, error) {
 		return api.CreateApiDomain(domain.ApiSpec)
 	case "file":
 		return files.CreateDomain(domain.FileSpec)
+	case "in-process":
+		return inprocess.CreateDomain(domain.InProcessSpec)
 	default:
 		return nil, fmt.Errorf("domain is unsupported")
 	}

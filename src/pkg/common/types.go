@@ -10,6 +10,7 @@ import (
 	"github.com/defenseunicorns/go-oscal/src/pkg/uuid"
 	oscalValidation "github.com/defenseunicorns/go-oscal/src/pkg/validation"
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	"github.com/defenseunicorns/lula/src/pkg/domains/inprocess"
 	"sigs.k8s.io/yaml"
 
 	"github.com/defenseunicorns/lula/src/config"
@@ -104,6 +105,8 @@ type Domain struct {
 	ApiSpec *api.ApiSpec `json:"api-spec,omitempty" yaml:"api-spec,omitempty"`
 	// FileSpec is the specification for a File domain, required if type is file
 	FileSpec *files.Spec `json:"file-spec,omitempty" yaml:"file-spec,omitempty"`
+	// InProcessSpec is the specification for an InProcess domain, required if type is in-process
+	InProcessSpec *inprocess.Spec `json:"inprocess-spec,omitempty" yaml:"inprocess-spec,omitempty"`
 }
 
 type Provider struct {

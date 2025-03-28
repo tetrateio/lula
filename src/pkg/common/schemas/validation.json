@@ -52,7 +52,8 @@
                     "enum": [
                         "kubernetes",
                         "api",
-                        "file"
+                        "file",
+                        "in-process"
                     ],
                     "description": "The type of domain (Required)"
                 },
@@ -459,6 +460,14 @@
                             }
                         }
                     }
+                }
+            }
+        },
+        "inprocess-spec": {
+            "type": "object",
+            "properties": {
+                "resources": {
+                    "type": "object"
                 }
             }
         },
