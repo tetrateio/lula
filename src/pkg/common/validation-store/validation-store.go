@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"sync"
 
 	"github.com/defenseunicorns/go-oscal/src/pkg/files"
 	"github.com/defenseunicorns/go-oscal/src/pkg/uuid"
 	oscalTypes "github.com/defenseunicorns/go-oscal/src/types/oscal-1-1-3"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/defenseunicorns/lula/src/pkg/common"
 	"github.com/defenseunicorns/lula/src/pkg/common/oscal"
@@ -107,17 +110,35 @@ func (v *ValidationStore) DryRun() (executable bool, msg string) {
 	return false, "No validation is executable"
 }
 
+// GetMaxConcurrentValidations returns the maximum number of concurrent validations.
+func GetMaxConcurrentValidations() int {
+	mcv := os.Getenv("MAX_CONCURRENT_VALIDATIONS")
+	if mcv == "" { // If the env var is not set, disable concurrency by only allowing one validation at a time
+		return 1
+	}
+	limit, err := strconv.Atoi(mcv)
+	if err != nil {
+		return 1
+	}
+	return limit
+}
+
 // RunValidations runs the validations in the store
 func (v *ValidationStore) RunValidations(ctx context.Context, confirmExecution, saveResources bool, outputsDir string) []oscalTypes.Observation {
-	observations := make([]oscalTypes.Observation, 0, len(v.validationMap))
+	var (
+		observations = make([]oscalTypes.Observation, 0, len(v.validationMap))
+		eg           errgroup.Group
+		mu           sync.Mutex
+	)
+	eg.SetLimit(GetMaxConcurrentValidations())
 
 	for k, val := range v.validationMap {
-		if val != nil {
+		if val == nil {
+			continue
+		}
+
+		eg.Go(func() error {
 			// Create observation for each non-nil validation
-			completedText := "evaluated"
-			spinnerMessage := fmt.Sprintf("Running validation %s", k)
-			spinner := message.NewProgressSpinner("%s", spinnerMessage)
-			defer spinner.Stop()
 			err := val.Validate(ctx, types.ExecutionAllowed(confirmExecution))
 			if err != nil {
 				message.Debugf("Error running validation %s: %v", k, err)
@@ -126,7 +147,6 @@ func (v *ValidationStore) RunValidations(ctx context.Context, confirmExecution, 
 				val.Result.Observations = map[string]string{
 					"Error running validation": err.Error(),
 				}
-				completedText = "NOT evaluated"
 			}
 
 			// Update individual result state
@@ -171,12 +191,19 @@ func (v *ValidationStore) RunValidations(ctx context.Context, confirmExecution, 
 				},
 			}
 			observation := oscal.CreateObservation("TEST", relevantEvidence, val, resourceHref, "[TEST]: %s - %s\n", k, val.Name)
+
+			mu.Lock()
 			v.observationMap[k] = &observation
 			observations = append(observations, observation)
+			mu.Unlock()
 
-			spinner.Successf("%s -> %s -> %s", spinnerMessage, completedText, val.Result.State)
-		}
+			return nil
+		})
 	}
+
+	// We don't return errors in the invoked goroutines, just log them
+	_ = eg.Wait()
+
 	return observations
 }
 
